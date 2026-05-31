@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#1a1626">
-<title>密室からの脱出 — KUSO ARCADE</title>
+<title>脱出 — 四つの部屋 — KUSO ARCADE</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{width:100%;height:100%;overflow:hidden;
@@ -13,39 +13,50 @@
     touch-action:manipulation;overscroll-behavior:none;}
   #app{position:fixed;inset:0;display:flex;flex-direction:column;}
 
-  #bar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:max(env(safe-area-inset-top),8px) 10px 8px;
-    background:rgba(0,0,0,.35);border-bottom:1px solid rgba(180,160,220,.18);z-index:5;}
-  #bar .ttl{font-weight:900;letter-spacing:1px;font-size:clamp(13px,4vw,18px);color:#d9c7ff;}
-  #bar .timer{margin-left:auto;font-variant-numeric:tabular-nums;font-size:clamp(14px,4vw,18px);
-    font-weight:800;color:#ffe27a;letter-spacing:1px;}
+  #bar{flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:max(env(safe-area-inset-top),8px) 9px 8px;
+    background:rgba(0,0,0,.4);border-bottom:1px solid rgba(180,160,220,.18);z-index:5;}
+  #bar .room{font-weight:900;letter-spacing:1px;font-size:clamp(13px,4vw,17px);color:#d9c7ff;white-space:nowrap;}
+  #bar .wall{font-size:11px;color:#9b8fc0;}
+  #bar .sp{margin-left:auto;}
+  #bar .timer{font-variant-numeric:tabular-nums;font-size:clamp(13px,4vw,17px);font-weight:800;color:#ffe27a;}
   .topbtn{border:1px solid rgba(180,160,220,.35);background:rgba(255,255,255,.06);color:#ece8f5;
-    border-radius:8px;padding:7px 10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+    border-radius:8px;padding:6px 9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;}
   .topbtn:active{background:rgba(255,255,255,.15);}
 
-  #room{flex:1 1 auto;position:relative;overflow:hidden;
-    background:linear-gradient(180deg,#2a2440 0%,#211c34 55%,#171327 55%,#120f1f 100%);}
-  #room::after{content:"";position:absolute;left:0;right:0;top:55%;height:2px;background:rgba(0,0,0,.4);}
-  .hot{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    cursor:pointer;transform:translate(-50%,-50%);transition:transform .08s, filter .15s;
-    filter:drop-shadow(0 4px 6px rgba(0,0,0,.5));}
-  .hot:active{transform:translate(-50%,-50%) scale(.92);}
-  .hot .ic{font-size:clamp(30px,9.5vw,56px);line-height:1;}
-  .hot .lb{margin-top:2px;font-size:10.5px;letter-spacing:1px;color:#cbbfe6;
-    background:rgba(0,0,0,.4);padding:1px 6px;border-radius:8px;white-space:nowrap;}
-  .hot.solved .lb{color:#8fe;}
-  .hot.hidden{display:none;}
+  #room{flex:1 1 auto;position:relative;overflow:hidden;transition:background .3s;}
+  #room::after{content:"";position:absolute;left:0;right:0;top:56%;height:2px;background:rgba(0,0,0,.45);}
+  .roombg-bedroom{background:linear-gradient(180deg,#33304e 0%,#2a2742 56%,#1c1930 56%,#16121f 100%);}
+  .roombg-hall{background:linear-gradient(180deg,#2c2438 0%,#241d30 56%,#181225 56%,#120d1c 100%);}
+  .roombg-study{background:linear-gradient(180deg,#3a2e26 0%,#2e241d 56%,#1f1813 56%,#150f0b 100%);}
+  .roombg-basement{background:linear-gradient(180deg,#1a2030 0%,#141a28 56%,#0d1018 56%,#080a10 100%);}
 
-  #msg{flex:0 0 auto;min-height:74px;max-height:38vh;overflow-y:auto;display:flex;flex-direction:column;
+  .hot{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    cursor:pointer;transform:translate(-50%,-50%);transition:transform .08s;
+    filter:drop-shadow(0 4px 6px rgba(0,0,0,.5));}
+  .hot:active{transform:translate(-50%,-50%) scale(.9);}
+  .hot .ic{font-size:clamp(30px,9vw,54px);line-height:1;}
+  .hot .lb{margin-top:2px;font-size:10.5px;letter-spacing:1px;color:#cbbfe6;
+    background:rgba(0,0,0,.45);padding:1px 6px;border-radius:8px;white-space:nowrap;}
+  .hot.solved .lb{color:#8fe;}
+  .hot.locked .lb{color:#ff9aa8;}
+
+  .navarrow{position:absolute;top:50%;transform:translateY(-50%);width:48px;height:64px;
+    display:flex;align-items:center;justify-content:center;font-size:32px;color:#d9c7ff;
+    background:rgba(0,0,0,.3);border:none;cursor:pointer;z-index:3;border-radius:10px;}
+  .navarrow:active{background:rgba(255,255,255,.12);}
+  #navL{left:6px;} #navR{right:6px;}
+
+  #msg{flex:0 0 auto;min-height:78px;max-height:40vh;overflow-y:auto;display:flex;flex-direction:column;
     align-items:center;justify-content:center;text-align:center;padding:10px 16px;
     font-size:clamp(13px,3.9vw,16px);line-height:1.6;
-    background:rgba(0,0,0,.5);border-top:1px solid rgba(180,160,220,.18);color:#f3eeff;}
+    background:rgba(0,0,0,.55);border-top:1px solid rgba(180,160,220,.18);color:#f3eeff;}
   #msg b{color:#ffe27a;}
 
   #inv{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 12px max(env(safe-area-inset-bottom),10px);
-    background:rgba(0,0,0,.4);min-height:56px;overflow-x:auto;}
+    background:rgba(0,0,0,.42);min-height:56px;overflow-x:auto;}
   #inv .lbl{font-size:11px;color:#9b8fc0;letter-spacing:1px;flex:0 0 auto;}
   .item{flex:0 0 auto;width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;
-    font-size:24px;background:rgba(255,255,255,.08);border:1px solid rgba(180,160,220,.3);position:relative;}
+    font-size:23px;background:rgba(255,255,255,.08);border:1px solid rgba(180,160,220,.3);position:relative;}
   .item.used{opacity:.45;}
 
   .modal{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;
@@ -54,10 +65,10 @@
   .panel{background:#1d182e;border:1px solid rgba(180,160,220,.35);border-radius:16px;
     padding:20px;max-width:340px;width:100%;text-align:center;box-shadow:0 14px 40px rgba(0,0,0,.6);
     max-height:90vh;overflow-y:auto;}
-  .panel h3{font-size:17px;margin-bottom:12px;letter-spacing:1px;color:#d9c7ff;}
-  .kdisp{font-size:34px;font-weight:900;letter-spacing:9px;font-variant-numeric:tabular-nums;
+  .panel h3{font-size:16px;margin-bottom:12px;letter-spacing:1px;color:#d9c7ff;}
+  .kdisp{font-size:32px;font-weight:900;letter-spacing:8px;font-variant-numeric:tabular-nums;
     background:#0d0a18;border:2px solid rgba(180,160,220,.4);border-radius:10px;padding:10px;margin-bottom:12px;
-    min-height:58px;color:#ffe27a;}
+    min-height:56px;color:#ffe27a;}
   .kdisp.bad{animation:shake .4s;border-color:#e0506e;color:#ff8da0;}
   @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
   .keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
@@ -66,19 +77,19 @@
   .key:active{background:rgba(255,255,255,.2);}
   .key.wide{font-size:15px;}
   .panel .close{margin-top:12px;font-size:13px;color:#9b8fc0;cursor:pointer;text-decoration:underline;}
-  #notesList{text-align:left;font-size:13.5px;line-height:1.7;color:#e6dffb;}
+  #notesList{text-align:left;font-size:13px;line-height:1.65;color:#e6dffb;}
   #notesList .none{color:#9b8fc0;text-align:center;}
   #notesList li{list-style:none;padding:7px 8px;border-bottom:1px dashed rgba(180,160,220,.2);}
   #notesList li b{color:#ffe27a;}
   .clk svg{vertical-align:middle;}
 
   .overlay{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;
-    justify-content:center;text-align:center;padding:28px;background:radial-gradient(circle at 50% 40%,rgba(40,25,70,.7),rgba(8,5,16,.95));}
+    justify-content:center;text-align:center;padding:28px;background:radial-gradient(circle at 50% 40%,rgba(40,25,70,.7),rgba(8,5,16,.96));}
   .overlay.hidden{display:none;}
-  .big{font-size:clamp(28px,8.5vw,54px);font-weight:900;letter-spacing:3px;color:#d9c7ff;
-    text-shadow:0 0 24px rgba(160,120,255,.6);line-height:1.2;}
+  .big{font-size:clamp(26px,8vw,52px);font-weight:900;letter-spacing:3px;color:#d9c7ff;
+    text-shadow:0 0 24px rgba(160,120,255,.6);line-height:1.25;}
   .win .big{color:#9effc0;text-shadow:0 0 24px rgba(80,255,150,.6);}
-  .sub{margin-top:18px;font-size:clamp(13px,3.9vw,16px);line-height:1.9;color:#cbbfe6;max-width:540px;}
+  .sub{margin-top:18px;font-size:clamp(13px,3.9vw,16px);line-height:1.9;color:#cbbfe6;max-width:560px;}
   .sub b{color:#ffe27a;}
   .stat{font-size:clamp(16px,5vw,22px);margin-top:10px;}
   .stat b{color:#ffe27a;font-size:1.4em;}
@@ -86,37 +97,29 @@
   @keyframes pop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.18)}100%{transform:scale(1)}}
   .btn{margin-top:22px;cursor:pointer;border:none;font-family:inherit;font-size:clamp(18px,5.5vw,24px);
     font-weight:900;letter-spacing:2px;color:#1a0f2e;background:linear-gradient(180deg,#c9a8ff,#9b6bff);
-    border-radius:12px;padding:15px 40px;box-shadow:0 7px 0 #5e3aa6,0 0 22px rgba(155,107,255,.5);}
+    border-radius:12px;padding:15px 38px;box-shadow:0 7px 0 #5e3aa6,0 0 22px rgba(155,107,255,.5);}
   .btn:active{transform:translateY(4px);box-shadow:0 3px 0 #5e3aa6;}
   .lnk{margin-top:16px;display:inline-block;color:#ffe27a;font-size:14px;font-weight:700;text-decoration:none;text-shadow:0 0 10px #b58900;}
   .hint{margin-top:14px;font-size:12px;color:#9b8fc0;}
-  #muteBtn{border:none;background:rgba(255,255,255,.06);color:#fff;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:15px;}
 </style>
 </head>
 <body>
 <div id="app">
   <div id="bar">
-    <span class="ttl">🔐 密室からの脱出</span>
-    <button id="notesBtn" class="topbtn">📝 メモ</button>
-    <button id="muteBtn">🔊</button>
+    <span class="room" id="roomName">寝室</span><span class="wall" id="wallInd"></span>
+    <span class="sp"></span>
+    <button id="notesBtn" class="topbtn">📝メモ</button>
+    <a class="topbtn" href="./index.html" title="ハブへ">🏠</a>
+    <button id="muteBtn" class="topbtn">🔊</button>
     <span class="timer" id="timer">00:00</span>
   </div>
 
   <div id="room">
-    <div class="hot" id="h-painting" style="left:36%;top:24%"><div class="ic">🖼️</div><div class="lb">絵</div></div>
-    <div class="hot" id="h-clock"    style="left:66%;top:18%"><div class="ic">🕗</div><div class="lb">時計</div></div>
-    <div class="hot" id="h-cal"      style="left:86%;top:26%"><div class="ic">📅</div><div class="lb">カレンダー</div></div>
-    <div class="hot" id="h-shelf"    style="left:13%;top:32%"><div class="ic">📚</div><div class="lb">本棚</div></div>
-    <div class="hot hidden" id="h-safe" style="left:36%;top:40%"><div class="ic">🧰</div><div class="lb">金庫</div></div>
-    <div class="hot" id="h-door"     style="left:90%;top:56%"><div class="ic">🚪</div><div class="lb">ドア</div></div>
-    <div class="hot" id="h-drawer"   style="left:50%;top:73%"><div class="ic">🗄️</div><div class="lb">引き出し</div></div>
-    <div class="hot" id="h-rug"      style="left:30%;top:88%"><div class="ic">🟫</div><div class="lb">じゅうたん</div></div>
-    <div class="hot" id="h-plant"    style="left:11%;top:80%"><div class="ic">🪴</div><div class="lb">鉢植え</div></div>
-    <div class="hot" id="h-trash"    style="left:72%;top:84%"><div class="ic">🗑️</div><div class="lb">ゴミ箱</div></div>
+    <button class="navarrow" id="navL">‹</button>
+    <button class="navarrow" id="navR">›</button>
   </div>
 
-  <div id="msg">見知らぬ部屋に閉じ込められた…。物を調べ、<b>2つの錠（金庫→ドア）</b>を解いて脱出せよ。<br>手がかりは「📝メモ」に記録される。</div>
-
+  <div id="msg"></div>
   <div id="inv"><span class="lbl">持ち物</span></div>
 </div>
 
@@ -144,11 +147,12 @@
 </div>
 
 <div class="overlay" id="startScreen">
-  <div class="big">密室からの<br>脱出</div>
-  <div class="sub">目を覚ますと見知らぬ部屋。<br>
-    部屋中を調べ、<b>金庫(3桁)</b> を開けて手がかりを得て、<b>ドア(4桁)</b> の暗証番号を導き出せ。<br>
-    時計を読み、数字を計算し、隠された文字を探せ。<br>
-    <span style="color:#9b8fc0">（手がかりは「📝メモ」に自動記録。毎回ナゾは変化する）</span></div>
+  <div class="big">脱出<br><span style="font-size:.5em;letter-spacing:6px;color:#9b8fc0">― 四つの部屋 ―</span></div>
+  <div class="sub">目を覚ますと見知らぬ屋敷の一室。<br>
+    <b>4つの部屋</b>を行き来し、鍵を見つけて扉を開け、各部屋の謎を解け。<br>
+    部屋に隠された<b>4つの封印の数字</b>と暗号で、玄関の鍵を導き出すのだ。<br>
+    <span style="color:#9b8fc0">画面の <b style="color:#d9c7ff">‹ ›</b> で部屋の中を見回し、扉をタップで移動。<br>
+    手がかりは「📝メモ」に自動記録。想定30分。毎回ナゾは変化。</span></div>
   <button class="btn" id="startBtn">▶ はじめる</button>
   <a class="lnk" href="./index.html">← ハブに戻る</a>
   <div class="hint">クリアタイムがランキングに登録されます（速いほど上位）</div>
@@ -167,8 +171,9 @@
 <script>
 (function(){
   "use strict";
-  var $ = function(id){ return document.getElementById(id); };
-  var msgEl=$('msg'), invEl=$('inv'), timerEl=$('timer');
+  var $=function(id){return document.getElementById(id);};
+  var roomEl=$('room'), msgEl=$('msg'), invEl=$('inv'), timerEl=$('timer');
+  var roomName=$('roomName'), wallInd=$('wallInd');
   var keypad=$('keypad'), kdisp=$('kdisp'), kTitle=$('kTitle'), notes=$('notes'), notesList=$('notesList');
   var startScreen=$('startScreen'), winScreen=$('winScreen');
 
@@ -179,193 +184,224 @@
     o.type=t||'sine';o.frequency.value=f; if(sl)o.frequency.exponentialRampToValueAtTime(sl,actx.currentTime+d);
     g.gain.value=v||0.06;o.connect(g);g.connect(actx.destination); var n=actx.currentTime;
     g.gain.setValueAtTime(g.gain.value,n);g.gain.exponentialRampToValueAtTime(0.0001,n+d);o.start(n);o.stop(n+d); }
-  var sfx={
-    tap:function(){tone(420,0.05,'sine',0.04,520);},
+  var sfx={ tap:function(){tone(420,0.05,'sine',0.04,520);}, move:function(){tone(300,0.08,'sine',0.05,420);},
     get:function(){tone(660,0.12,'triangle',0.08,990);setTimeout(function(){tone(1180,0.16,'triangle',0.07);},90);},
     bad:function(){tone(200,0.2,'sawtooth',0.09,120);},
     ok:function(){tone(720,0.12,'square',0.07,1080);setTimeout(function(){tone(1080,0.16,'square',0.06);},100);},
-    win:function(){[523,659,784,1046].forEach(function(f,i){setTimeout(function(){tone(f,0.4,'triangle',0.09);},i*150);});}
-  };
+    win:function(){[523,659,784,1046,1318].forEach(function(f,i){setTimeout(function(){tone(f,0.4,'triangle',0.09);},i*140);});} };
   $('muteBtn').addEventListener('click',function(){ muted=!muted; $('muteBtn').textContent=muted?'🔇':'🔊'; });
 
-  // ---- state ----
-  var S={}, started=false, won=false, t0=0, timerId=null;
-  var clues={};
+  // ---- helpers ----
   function rnd(a,b){ return a+Math.floor(Math.random()*(b-a+1)); }
   function shuffle(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i];a[i]=a[j];a[j]=t; } return a; }
 
-  var SRC_LABEL={ books:'本(合計)', cal:'カレンダー', clock:'時計', uv:'じゅうたん' };
+  var COLNAME={赤:'#e0506e',青:'#4a90e2',黄:'#ffe27a',緑:'#4caf50',紫:'#b06bff'};
+  var SEAL_LABEL={s1:'寝室の封印',s2:'書斎の封印',s3:'地下の封印',clock:'時計'};
+
+  // ---- state ----
+  var S={}, started=false, won=false, t0=0, timerId=null, clues={};
+  var pos={room:'bedroom',wall:0};
 
   function gen(){
-    S.books = shuffle([1,2,3,4,5,6,7,8,9]).slice(0,3);            // 3つの異なる数字
-    S.booksSum = S.books.reduce(function(a,b){return a+b;},0)%10;  // ドア用：合計の一の位
-    S.safeCode = S.books.slice().sort(function(a,b){return b-a;}).join(''); // 金庫：大きい順
-    S.clockH = rnd(1,12);
-    S.clockMnum = rnd(1,12);                                       // 長針が指す数字(1-12)
-    S.clockMin = (S.clockMnum%12)*5;                              // 分
-    S.clockNum = (S.clockH + S.clockMnum)%10;                     // ドア用：短針＋長針 の一の位
-    S.uv = rnd(0,9);
-    S.cal = rnd(0,9);
-    S.shift = rnd(1,4);
-    S.order = shuffle(['books','cal','clock','uv']);
-    var val={ books:S.booksSum, cal:S.cal, clock:S.clockNum, uv:S.uv };
-    S.doorCode = S.order.map(function(k){ return (val[k]+S.shift)%10; }).join('');
-    S.hasKey=false; S.hasUV=false; S.safeOpen=false; S.paintingMoved=false;
+    // 寝室: 写真3枚 → 小さい順 = 引き出しコード
+    S.photos = shuffle([1,2,3,4,5,6,7,8,9]).slice(0,3);
+    S.drawerCode = S.photos.slice().sort(function(a,b){return a-b;}).join('');
+    // 書斎: 5色の本に数字、指定3色順 = 金庫コード
+    var pal=['赤','青','黄','緑','紫']; var nums=shuffle([1,2,3,4,5,6,7,8,9]).slice(0,5);
+    S.bookByColor={}; pal.forEach(function(c,i){ S.bookByColor[c]=nums[i]; });
+    S.colorOrder = shuffle(pal).slice(0,3);
+    S.safeCode = S.colorOrder.map(function(c){return S.bookByColor[c];}).join('');
+    // 地下: UVで壁に浮かぶ3桁 = 戸棚コード
+    S.cabCode = ''+rnd(0,9)+rnd(0,9)+rnd(0,9);
+    // 廊下: 時計
+    S.clockH=rnd(1,12); S.clockMnum=rnd(1,12); S.clockNum=(S.clockH+S.clockMnum)%10;
+    // 封印
+    S.seal={ s1:rnd(0,9), s2:rnd(0,9), s3:rnd(0,9), clock:S.clockNum };
+    // 最終暗号
+    S.shift=rnd(1,4); S.finalOrder=shuffle(['s1','s2','s3','clock']);
+    S.finalCode=S.finalOrder.map(function(k){return (S.seal[k]+S.shift)%10;}).join('');
+    // progress flags
+    S.has={}; S.drawerOpen=false; S.safeOpen=false; S.cabOpen=false;
+    S.studyOpen=false; S.basementOpen=false; S.uvWallRead=false;
   }
 
-  function newGame(){
-    started=true; won=false; clues={};
-    gen();
-    invEl.querySelectorAll('.item').forEach(function(n){n.remove();});
-    document.querySelectorAll('.hot').forEach(function(h){h.classList.remove('solved');});
-    $('h-safe').classList.add('hidden');
-    renderNotes();
-    say('ここはどこだ…？ 部屋の物をタップして調べよう。<br>まずは隅々まで探索だ。');
-    t0=Date.now();
-    if(timerId)clearInterval(timerId);
-    timerId=setInterval(tick,250);
-  }
-  function tick(){ if(won)return; var s=Math.floor((Date.now()-t0)/1000);
-    timerEl.textContent=('0'+Math.floor(s/60)).slice(-2)+':'+('0'+(s%60)).slice(-2); }
-  function say(html){ msgEl.innerHTML=html; }
-
-  function addItem(emoji,name){ var d=document.createElement('div'); d.className='item'; d.textContent=emoji; d.dataset.name=name; invEl.appendChild(d); return d; }
-  function hasItem(n){ return !!invEl.querySelector('.item[data-name="'+n+'"]'); }
-  function addClue(key,text){ clues[key]=text; renderNotes(); }
-  function renderNotes(){ var ks=Object.keys(clues);
-    if(!ks.length){ notesList.innerHTML='<li class="none">まだ手がかりがありません。<br>部屋を調べよう。</li>'; return; }
-    notesList.innerHTML=ks.map(function(k){return '<li>'+clues[k]+'</li>';}).join(''); }
-  function markSolved(id){ var h=$(id); if(h)h.classList.add('solved'); }
-
-  // analog clock SVG
   function clockSVG(h,mnum){
     var nums='';
     for(var i=1;i<=12;i++){ var a=(i*30-90)*Math.PI/180, x=70+52*Math.cos(a), y=70+52*Math.sin(a);
       nums+='<text x="'+x.toFixed(1)+'" y="'+(y+4).toFixed(1)+'" font-size="11" text-anchor="middle" fill="#d8d2ee" font-family="sans-serif">'+i+'</text>'; }
     function hand(num,len,w,col){ var a=((num%12)*30-90)*Math.PI/180, x=70+len*Math.cos(a), y=70+len*Math.sin(a);
       return '<line x1="70" y1="70" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+col+'" stroke-width="'+w+'" stroke-linecap="round"/>'; }
-    return '<svg width="140" height="140" viewBox="0 0 140 140">'
-      +'<circle cx="70" cy="70" r="64" fill="#0d0a18" stroke="#9b8fc0" stroke-width="2"/>'+nums
-      +hand(h,32,5,'#ffe27a')      // 短針=黄
-      +hand(mnum,50,2.6,'#7df9ff') // 長針=水色
-      +'<circle cx="70" cy="70" r="4" fill="#fff"/></svg>';
+    return '<svg width="140" height="140" viewBox="0 0 140 140"><circle cx="70" cy="70" r="64" fill="#0d0a18" stroke="#9b8fc0" stroke-width="2"/>'
+      +nums+hand(h,32,5,'#ffe27a')+hand(mnum,50,2.6,'#7df9ff')+'<circle cx="70" cy="70" r="4" fill="#fff"/></svg>';
+  }
+  function booksHTML(){ var pal=['赤','青','黄','緑','紫'];
+    return pal.map(function(c){return '<span style="color:'+COLNAME[c]+';font-weight:900">'+c+'='+S.bookByColor[c]+'</span>';}).join('　'); }
+  function colorOrderHTML(){ return S.colorOrder.map(function(c){return '<span style="color:'+COLNAME[c]+';font-weight:900">'+c+'</span>';}).join(' → '); }
+
+  // ---- world ----
+  var WORLD={
+    bedroom:{ name:'寝室', walls:[
+      [ {id:'bed',ic:'🛏️',lb:'ベッド',x:30,y:42}, {id:'photo1',ic:'🖼️',lb:'写真',x:62,y:30},
+        {id:'sortNote',ic:'📝',lb:'壁のメモ',x:82,y:40} ],
+      [ {id:'drawer',ic:'🗄️',lb:'引き出し',x:32,y:70}, {id:'photo2',ic:'🖼️',lb:'写真',x:60,y:30},
+        {id:'photo3',ic:'🖼️',lb:'写真',x:80,y:30}, {go:'hall',ic:'🚪',lb:'廊下へ',x:90,y:62} ]
+    ]},
+    hall:{ name:'廊下', walls:[
+      [ {id:'exit',ic:'🚪',lb:'玄関(出口)',x:30,y:52}, {id:'clock',ic:'🕗',lb:'時計',x:62,y:24},
+        {id:'hallPic',ic:'🖼️',lb:'絵',x:84,y:34} ],
+      [ {go:'bedroom',ic:'🚪',lb:'寝室へ',x:16,y:54}, {go:'study',ic:'🚪',lb:'書斎',x:44,y:54,need:'書斎の鍵'},
+        {go:'basement',ic:'🚪',lb:'地下',x:72,y:54,need:'地下の鍵'}, {id:'plant',ic:'🪴',lb:'植木',x:90,y:74} ]
+    ]},
+    study:{ name:'書斎', walls:[
+      [ {id:'shelf',ic:'📚',lb:'本棚',x:26,y:38}, {id:'safe',ic:'🧰',lb:'金庫',x:58,y:62},
+        {id:'colorNote',ic:'📝',lb:'メモ',x:84,y:40} ],
+      [ {id:'deskStudy',ic:'🗄️',lb:'机',x:34,y:66}, {id:'globe',ic:'🌐',lb:'地球儀',x:64,y:46},
+        {go:'hall',ic:'🚪',lb:'廊下へ',x:90,y:60} ]
+    ]},
+    basement:{ name:'地下室', walls:[
+      [ {id:'uvWall',ic:'🧱',lb:'壁',x:28,y:40}, {id:'cabinet',ic:'🗄️',lb:'戸棚',x:60,y:64},
+        {id:'baseNote',ic:'📝',lb:'走り書き',x:84,y:42} ],
+      [ {id:'shelvesB',ic:'📦',lb:'棚',x:34,y:60}, {go:'hall',ic:'🚪',lb:'廊下へ',x:88,y:60} ]
+    ]}
+  };
+
+  // ---- render ----
+  function render(){
+    var rm=WORLD[pos.room]; roomName.textContent=rm.name;
+    wallInd.textContent=' 壁 '+(pos.wall+1)+'/'+rm.walls.length;
+    roomEl.className=''; roomEl.classList.add('roombg-'+pos.room);
+    roomEl.querySelectorAll('.hot').forEach(function(n){n.remove();});
+    rm.walls[pos.wall].forEach(function(h){
+      var d=document.createElement('div'); d.className='hot'; d.style.left=h.x+'%'; d.style.top=h.y+'%';
+      var solved = h.id && isSolved(h.id);
+      var locked = h.go && h.need && !S['_unlocked_'+h.go] && !hasItem(h.need);
+      if(solved) d.classList.add('solved'); if(locked) d.classList.add('locked');
+      d.innerHTML='<div class="ic">'+h.ic+'</div><div class="lb">'+h.lb+(locked?' 🔒':'')+'</div>';
+      d.addEventListener('click',function(){ if(won)return; ensureAudio(); onHot(h); });
+      roomEl.appendChild(d);
+    });
+  }
+  function isSolved(id){
+    return (id==='drawer'&&S.drawerOpen)||(id==='safe'&&S.safeOpen)||(id==='cabinet'&&S.cabOpen)
+      ||(id==='uvWall'&&S.uvWallRead)||S['_examined_'+id];
   }
 
-  function bind(id,fn){ $(id).addEventListener('click',function(){ if(!started||won)return; ensureAudio(); sfx.tap(); fn(); }); }
+  function turn(dir){ var n=WORLD[pos.room].walls.length; pos.wall=(pos.wall+dir+n)%n; sfx.move(); render(); }
+  $('navL').addEventListener('click',function(){ if(!won&&started){ensureAudio();turn(-1);} });
+  $('navR').addEventListener('click',function(){ if(!won&&started){ensureAudio();turn(1);} });
 
-  bind('h-shelf',function(){
-    var b=S.books.map(function(n){return '<span style="font-size:1.4em">📕</span>'+n;}).join('　');
-    say('本棚に3冊。背に数字が書かれている：<br><b style="font-size:1.2em">'+b+'</b>');
-    addClue('books','本棚の数字：<b>'+S.books.join(' , ')+'</b>');
-    markSolved('h-shelf');
-  });
-
-  bind('h-clock',function(){
-    say('壁の止まった時計。<div class="clk">'+clockSVG(S.clockH,S.clockMnum)+'</div>'
-      +'<b style="color:#ffe27a">短針</b>と<b style="color:#7df9ff">長針</b>が指す数字が鍵らしい。');
-    addClue('clock','時計：<div class="clk">'+clockSVG(S.clockH,S.clockMnum)+'</div>'
-      +'<span style="font-size:12px">短針(黄)と長針(水色)が指す数字を確認</span>');
-    markSolved('h-clock');
-  });
-
-  bind('h-cal',function(){
-    say('壁掛けカレンダー。ある日付が赤丸で囲まれている。<br>その数字は <b style="font-size:1.3em">'+S.cal+'</b> 🔴');
-    addClue('cal','カレンダーの赤丸：<b>'+S.cal+'</b>');
-    markSolved('h-cal');
-  });
-
-  bind('h-plant',function(){
-    if(!S.hasKey){ S.hasKey=true; addItem('🔑','鍵'); sfx.get();
-      say('鉢植えの土を掘ると…<b>小さな鍵🔑</b>を見つけた！'); markSolved('h-plant'); }
-    else say('鉢植えの土には、もう何もない。🪴');
-  });
-
-  bind('h-drawer',function(){
-    if(S.drawerOpen){ say('引き出しの中：🔦UVライトを入手済み。<br>メモ：「金庫は本の数字を“大きい順”に並べた3桁」'); return; }
-    if(hasItem('鍵')){
-      S.drawerOpen=true; sfx.ok();
-      var k=invEl.querySelector('.item[data-name="鍵"]'); if(k)k.classList.add('used');
-      if(!S.hasUV){ S.hasUV=true; addItem('🔦','UVライト'); }
-      say('🔑で引き出しを開けた！中に <b>🔦UVライト</b> とメモ。<br>メモ：「<b>金庫＝本の数字を“大きい順”に並べた3桁</b>」');
-      addClue('safeRule','🧰金庫(3桁)＝本棚の数字を<b>大きい順</b>に並べる');
-      markSolved('h-drawer');
-    } else { say('引き出しには<b>鍵</b>がかかっている。鍵はどこだ？🔒'); }
-  });
-
-  bind('h-rug',function(){
-    if(hasItem('UVライト')){
-      say('🔦じゅうたんをめくり、UVライトを当てると…<br>床に数字が浮かび上がった！「<b style="font-size:1.3em">'+S.uv+'</b>」');
-      addClue('uv','じゅうたんのUV文字：<b>'+S.uv+'</b>');
-      markSolved('h-rug');
-    } else {
-      say('じゅうたんをめくると、床にうっすら何か書いてある。<br>でも薄すぎて読めない…<b>特殊な光</b>が要りそうだ。🔦?');
+  // ---- interactions ----
+  function onHot(h){
+    if(h.go){ // door
+      if(h.need && !hasItem(h.need) && !S['_unlocked_'+h.go]){ sfx.bad(); say('扉には鍵がかかっている。<br><b>'+h.need+'</b> が必要だ。🔒'); return; }
+      if(h.need){ S['_unlocked_'+h.go]=true; var it=invEl.querySelector('.item[data-name="'+h.need+'"]'); if(it)it.classList.add('used'); }
+      sfx.move(); pos.room=h.go; pos.wall=0; render();
+      say('「'+WORLD[h.go].name+'」に入った。‹ › で見回そう。'); return;
     }
-  });
-
-  bind('h-painting',function(){
-    if(!S.paintingMoved){ S.paintingMoved=true; $('h-safe').classList.remove('hidden'); sfx.ok();
-      say('額の絵をずらすと…壁に埋め込まれた <b>🧰金庫</b> が現れた！'); markSolved('h-painting'); }
-    else say('絵の裏には金庫がある。金庫を調べよう。🧰');
-  });
-
-  bind('h-trash',function(){
-    say('ゴミ箱の丸めた紙：<br>「<b>金庫の中に“扉の解き方”がある</b>。まず金庫を開けろ」📝');
-    addClue('hint','金庫の中に<b>扉の暗号ルール</b>がある');
-    markSolved('h-trash');
-  });
-
-  bind('h-safe',function(){ openKeypad('safe'); });
-  bind('h-door',function(){
-    if(!S.safeOpen){ say('ドアには4桁の暗証番号。まだ番号がわからない…<br>金庫の中の<b>暗号ルール</b>が必要そうだ。🚪'); }
-    openKeypad('door');
-  });
-
-  // ---- keypad (safe=3桁 / door=4桁) ----
-  var entry='', kmode='door', klen=4;
-  function openKeypad(mode){
-    kmode=mode; klen=(mode==='safe')?3:4; entry=''; updKdisp();
-    kTitle.textContent=(mode==='safe')?'🧰 金庫の暗証番号（3桁）':'🚪 ドアの暗証番号（4桁）';
-    keypad.classList.add('show');
+    sfx.tap(); act(h.id);
   }
+
+  function act(id){
+    switch(id){
+      case 'photo1': mark(id); say('古い写真。隅に「<b>'+S.photos[0]+'</b>」と歳が書かれている。'); addClue('photos',photoClue()); break;
+      case 'photo2': mark(id); say('家族写真。「<b>'+S.photos[1]+'</b>」歳。'); addClue('photos',photoClue()); break;
+      case 'photo3': mark(id); say('色あせた写真。「<b>'+S.photos[2]+'</b>」歳。'); addClue('photos',photoClue()); break;
+      case 'sortNote': mark(id); say('壁のメモ：<br>「引き出しの番号は、写真の数字を<b>小さい順</b>に並べたもの」'); addClue('sortRule','引き出し(3桁)＝写真の数字を<b>小さい順</b>に'); break;
+      case 'bed': if(!S.has.uv){ S.has.uv=true; addItem('🔦','UVライト'); sfx.get(); mark(id);
+          say('ベッドの下を探ると…<b>🔦UVライト</b>を見つけた！'); } else say('ベッドの下にはもう何もない。'); break;
+      case 'drawer':
+        if(S.drawerOpen){ say('引き出しは開いている。底に封印『<b>'+S.seal.s1+'</b>』。'); break; }
+        openKeypad('引き出し（3桁）',3,S.drawerCode,function(){
+          S.drawerOpen=true; if(!S.has.studyKey){S.has.studyKey=true; addItem('🔑','書斎の鍵');}
+          say('🔓引き出しが開いた！<b>🔑書斎の鍵</b>と、底の刻印『<b>'+S.seal.s1+'</b>』を発見！');
+          addClue('seal1','🔵 '+SEAL_LABEL.s1+'：<b>'+S.seal.s1+'</b>'); render();
+        }); break;
+
+      case 'clock': mark(id); say('柱時計は止まっている。<div class="clk">'+clockSVG(S.clockH,S.clockMnum)+'</div>'
+          +'<b style="color:#ffe27a">短針</b>と<b style="color:#7df9ff">長針</b>が指す数字を足すと…？');
+        addClue('clock','🕗 時計（'+SEAL_LABEL.clock+'）：<div class="clk">'+clockSVG(S.clockH,S.clockMnum)+'</div><span style="font-size:12px">短針(黄)+長針(水色)の数字＝封印</span>'); break;
+      case 'hallPic': mark(id); say('風景画。特に変わったところはない…ように見える。'); break;
+      case 'plant': mark(id); say('観葉植物。土を探っても何も無かった。'); break;
+      case 'exit':
+        openKeypad('🚪 玄関の扉（4桁）',4,S.finalCode,function(){ doWin(); }); break;
+
+      case 'shelf': mark(id); say('本棚に5色の本。背の数字：<br>'+booksHTML()); addClue('books','📚 本：'+booksHTML()); break;
+      case 'colorNote': mark(id); say('走り書き：<br>「金庫＝ '+colorOrderHTML()+' の本の数字を順に」'); addClue('colorRule','🧰 金庫(3桁)＝ '+colorOrderHTML()+' の本の数字'); break;
+      case 'safe':
+        if(S.safeOpen){ say('金庫は開いている。封印『<b>'+S.seal.s2+'</b>』。'); break; }
+        openKeypad('🧰 金庫（3桁）',3,S.safeCode,function(){
+          S.safeOpen=true; if(!S.has.baseKey){S.has.baseKey=true; addItem('🗝️','地下の鍵');}
+          say('🔓金庫が開いた！<b>🗝️地下の鍵</b>と、封印『<b>'+S.seal.s2+'</b>』を入手！');
+          addClue('seal2','🟠 '+SEAL_LABEL.s2+'：<b>'+S.seal.s2+'</b>'); render();
+        }); break;
+      case 'deskStudy': mark(id); say('書斎の机。引き出しは空。ペンと埃だけだ。'); break;
+      case 'globe': mark(id); say('地球儀を回してみたが、ただの飾りのようだ。'); break;
+
+      case 'uvWall':
+        if(hasItem('UVライト')){ S.uvWallRead=true; mark(id);
+          say('🔦壁にUVライトを当てると、数字が浮かび上がった！<br>戸棚の番号は「<b>'+S.cabCode+'</b>」'); addClue('uvCab','🧱 地下の壁(UV)：戸棚は <b>'+S.cabCode+'</b>'); render(); }
+        else say('壁にうっすら何か書いてあるが読めない。<b>特殊な光</b>が要りそうだ。🔦?'); break;
+      case 'cabinet':
+        if(S.cabOpen){ say('戸棚は開いている。封印『<b>'+S.seal.s3+'</b>』と暗号メモ。'); break; }
+        openKeypad('🗄️ 地下の戸棚（3桁）',3,S.cabCode,function(){
+          S.cabOpen=true;
+          var ord=S.finalOrder.map(function(k){return SEAL_LABEL[k];}).join(' → ');
+          say('🔓戸棚が開いた！封印『<b>'+S.seal.s3+'</b>』と、暗号の書付：<br>'
+            +'「<b>玄関の番号</b>＝【'+ord+'】の順に、各 <b>+'+S.shift+'</b>（一の位）」');
+          addClue('seal3','🟢 '+SEAL_LABEL.s3+'：<b>'+S.seal.s3+'</b>');
+          addClue('finalRule','🚪 玄関＝【'+ord+'】の順に各 <b>+'+S.shift+'</b>（一の位）');
+          addClue('finalEx','例）封印が7なら 7+'+S.shift+' → 一の位 <b>'+((7+S.shift)%10)+'</b>');
+          render();
+        }); break;
+      case 'baseNote': mark(id); say('走り書き：「封印は4つ。すべて集め、暗号で繋げ。」'); break;
+      case 'shelvesB': mark(id); say('地下の棚。空き瓶が並ぶだけだ。'); break;
+      default: say('特に何もないようだ。');
+    }
+  }
+  function photoClue(){ return '🖼️ 写真の歳：'+S.photos.join(' , ')+'（小さい順に並べる）'; }
+  function mark(id){ S['_examined_'+id]=true; var rm=WORLD[pos.room]; render(); }
+
+  // ---- items / notes ----
+  function addItem(emoji,name){ var d=document.createElement('div'); d.className='item'; d.textContent=emoji; d.dataset.name=name; invEl.appendChild(d); return d; }
+  function hasItem(n){ return !!invEl.querySelector('.item[data-name="'+n+'"]'); }
+  function addClue(key,text){ clues[key]=text; renderNotes(); }
+  function renderNotes(){ var ks=Object.keys(clues);
+    if(!ks.length){ notesList.innerHTML='<li class="none">まだ手がかりがありません。<br>部屋を調べよう。</li>'; return; }
+    notesList.innerHTML=ks.map(function(k){return '<li>'+clues[k]+'</li>';}).join(''); }
+
+  // ---- keypad ----
+  var entry='', klen=4, ktarget='', kcb=null;
+  function openKeypad(title,len,target,cb){ klen=len; ktarget=target; kcb=cb; entry=''; updKdisp();
+    kTitle.textContent=title; keypad.classList.add('show'); }
   function updKdisp(){ var s=entry; while(s.length<klen)s+='•'; kdisp.textContent=s; }
   keypad.querySelectorAll('.key').forEach(function(k){ if(k.id)return;
     k.addEventListener('click',function(){ if(entry.length<klen){ ensureAudio(); sfx.tap(); entry+=k.textContent.trim(); updKdisp(); } }); });
   $('kClear').addEventListener('click',function(){ entry=''; updKdisp(); });
   $('kClose').addEventListener('click',function(){ keypad.classList.remove('show'); });
-  $('kEnter').addEventListener('click',function(){
-    if(entry.length<klen) return; ensureAudio();
-    var target=(kmode==='safe')?S.safeCode:S.doorCode;
-    if(entry===target){
-      if(kmode==='safe'){ S.safeOpen=true; sfx.ok(); keypad.classList.remove('show'); openSafe(); }
-      else { keypad.classList.remove('show'); doWin(); }
-    } else { sfx.bad(); kdisp.classList.add('bad'); setTimeout(function(){kdisp.classList.remove('bad');entry='';updKdisp();},450); }
-  });
-
-  function openSafe(){
-    markSolved('h-safe');
-    var ord=S.order.map(function(k){return SRC_LABEL[k];}).join(' → ');
-    say('🧰金庫が開いた！中の紙にはこう書かれていた：<br>'
-      +'「<b>扉の暗証番号</b>＝【'+ord+'】の順に、<br>それぞれの数字に <b>+'+S.shift+'</b>（一の位）」');
-    addClue('doorRule','🚪扉＝【'+ord+'】の順に、各 <b>+'+S.shift+'</b>（一の位）');
-    addClue('doorRule2','例）数字7なら 7+'+S.shift+'='+((7+S.shift))+' → 一の位 <b>'+((7+S.shift)%10)+'</b>');
-  }
+  $('kEnter').addEventListener('click',function(){ if(entry.length<klen)return; ensureAudio();
+    if(entry===ktarget){ sfx.ok(); keypad.classList.remove('show'); if(kcb)kcb(); }
+    else { sfx.bad(); kdisp.classList.add('bad'); setTimeout(function(){kdisp.classList.remove('bad');entry='';updKdisp();},450); } });
 
   $('notesBtn').addEventListener('click',function(){ renderNotes(); notes.classList.add('show'); });
   $('nClose').addEventListener('click',function(){ notes.classList.remove('show'); });
 
-  function doWin(){
-    won=true; if(timerId)clearInterval(timerId); sfx.win();
+  // ---- flow ----
+  function newGame(){ started=true; won=false; clues={}; gen();
+    invEl.querySelectorAll('.item').forEach(function(n){n.remove();});
+    pos={room:'bedroom',wall:0}; render(); renderNotes();
+    say('知らない部屋で目が覚めた…。まずは見回して（‹ ›）、物を調べよう。');
+    t0=Date.now(); if(timerId)clearInterval(timerId); timerId=setInterval(tick,250); }
+  function tick(){ if(won)return; var s=Math.floor((Date.now()-t0)/1000);
+    timerEl.textContent=('0'+Math.floor(s/60)).slice(-2)+':'+('0'+(s%60)).slice(-2); }
+  function say(html){ msgEl.innerHTML=html; }
+
+  function doWin(){ won=true; if(timerId)clearInterval(timerId); sfx.win();
     var s=Math.floor((Date.now()-t0)/1000);
-    var mmss=('0'+Math.floor(s/60)).slice(-2)+':'+('0'+(s%60)).slice(-2);
-    $('winTime').textContent=mmss;
-    $('winSub').innerHTML='金庫の暗号を解き、扉の番号 <b>'+S.doorCode+'</b> を導き出した。<br>見事な脱出だ！';
-    if(window.Rank){
-      var prev=(window.Rank.top('escape',1)[0]||{}).s;
-      window.Rank.submitScore('escape', s);
-      if(prev===undefined || s<prev) $('winRec').classList.remove('hidden'); else $('winRec').classList.add('hidden');
-    }
-    winScreen.classList.remove('hidden');
-  }
+    $('winTime').textContent=('0'+Math.floor(s/60)).slice(-2)+':'+('0'+(s%60)).slice(-2);
+    $('winSub').innerHTML='4つの封印と暗号を解き、玄関の番号 <b>'+S.finalCode+'</b> を導いた。<br>屋敷からの脱出に成功！';
+    if(window.Rank){ var prev=(window.Rank.top('escape',1)[0]||{}).s; window.Rank.submitScore('escape', s);
+      if(prev===undefined||s<prev)$('winRec').classList.remove('hidden'); else $('winRec').classList.add('hidden'); }
+    winScreen.classList.remove('hidden'); }
 
   $('startBtn').addEventListener('click',function(){ ensureAudio(); startScreen.classList.add('hidden'); winScreen.classList.add('hidden'); newGame(); });
   $('retryBtn').addEventListener('click',function(){ ensureAudio(); winScreen.classList.add('hidden'); newGame(); });
