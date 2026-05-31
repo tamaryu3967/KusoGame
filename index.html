@@ -142,7 +142,7 @@
     </div>
     <div class="board" id="board"></div>
     <div class="metric-note" id="metricNote"></div>
-    <div class="board-foot"><button id="clearBtn">この記録を消す</button></div>
+    <div class="board-foot"><button id="refreshBtn">🔄 更新</button> ／ <button id="clearBtn">端末内の記録を消す</button></div>
   </div>
 
   <footer>記録はこの端末に保存されます（ローカルランキング）</footer>
@@ -180,21 +180,26 @@
 
   function renderBoard(game){
     var c = R.CFG[game];
-    var list = R.top(game, 10);
     var myName = R.getName() || 'ナナシ';
-    metricNote.textContent = c.metric + ' で順位付け（'+(c.asc?'小さいほど上位':'大きいほど上位')+'）';
-    if(!list.length){ board.innerHTML = '<div class="empty">まだ記録がありません。<br>プレイして1位を取ろう！</div>'; return; }
-    var html='';
-    list.forEach(function(e,i){
-      var cls = 'brow'+(i<3?(' top'+(i+1)):'');
-      if(e.n===myName) cls+=' me';
-      html += '<div class="'+cls+'">'
-        + '<div class="pos">'+(i===0?'👑':(i+1))+'</div>'
-        + '<div class="nm">'+escapeHtml(e.n)+' <span style="opacity:.45;font-size:11px">'+fmtDate(e.t)+'</span></div>'
-        + '<div class="sc">'+e.s+'<span style="font-size:11px;color:#9fb0c8;font-weight:400"> '+c.unit+'</span></div>'
-        + '</div>';
+    var net = R.isOnline() ? '🌐 オンライン全体ランキング' : '📱 この端末の記録';
+    metricNote.textContent = net + ' ／ ' + c.metric + ' で順位付け（'+(c.asc?'小さいほど上位':'大きいほど上位')+'）';
+    board.innerHTML = '<div class="empty">読み込み中…</div>';
+    var req = game;
+    R.topAsync(game, 10).then(function(list){
+      if(req !== current) return; // タブが切り替わっていたら破棄
+      if(!list || !list.length){ board.innerHTML = '<div class="empty">まだ記録がありません。<br>プレイして1位を取ろう！</div>'; return; }
+      var html='';
+      list.forEach(function(e,i){
+        var cls = 'brow'+(i<3?(' top'+(i+1)):'');
+        if(e.n===myName) cls+=' me';
+        html += '<div class="'+cls+'">'
+          + '<div class="pos">'+(i===0?'👑':(i+1))+'</div>'
+          + '<div class="nm">'+escapeHtml(e.n)+' <span style="opacity:.45;font-size:11px">'+fmtDate(e.t)+'</span></div>'
+          + '<div class="sc">'+e.s+'<span style="font-size:11px;color:#9fb0c8;font-weight:400"> '+c.unit+'</span></div>'
+          + '</div>';
+      });
+      board.innerHTML = html;
     });
-    board.innerHTML = html;
   }
   function escapeHtml(s){ return String(s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
 
@@ -205,8 +210,10 @@
     renderBoard(current);
   });
 
+  document.getElementById('refreshBtn').addEventListener('click', function(){ renderBoard(current); });
+
   clearBtn.addEventListener('click', function(){
-    if(confirm(R.CFG[current].title+' のランキング記録を消去します。よろしいですか？')){
+    if(confirm(R.CFG[current].title+' の「この端末内」の記録を消去します。\n（オンライン全体ランキングからは消えません）')){
       R.clear(current); renderBoard(current);
       var t=R.top(current,1); document.getElementById('best-'+current).textContent = t.length?('BEST '+t[0].s+R.CFG[current].unit):'BEST —';
     }
