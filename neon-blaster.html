@@ -169,8 +169,9 @@
   <div class="hint">タップ / クリックでリスタート</div>
 </div>
 
-<a class="back" href="./index.html">← 中年ダッシュに戻る</a>
+<a class="back" href="./index.html">← ハブに戻る</a>
 
+<script src="./rank.js"></script>
 <script type="module">
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -411,8 +412,8 @@ function onMouseMove(e){
   if(document.pointerLockElement!==renderer.domElement) return;
   const s=0.0022;
   player.yaw -= e.movementX*s;
-  player.pitch -= e.movementY*s;
-  player.pitch=Math.max(-1.2,Math.min(1.2,player.pitch));
+  player.pitch += e.movementY*s;
+  player.pitch=Math.max(-1.5,Math.min(1.5,player.pitch));
 }
 document.addEventListener('mousemove',onMouseMove);
 document.addEventListener('pointerlockchange',()=>{
@@ -455,8 +456,8 @@ function handleTouchMove(e){
     } else if(t.identifier===lookTouchId){
       const s=0.005;
       player.yaw -= (t.clientX-lookLast.x)*s;
-      player.pitch -= (t.clientY-lookLast.y)*s;
-      player.pitch=Math.max(-1.2,Math.min(1.2,player.pitch));
+      player.pitch += (t.clientY-lookLast.y)*s;
+      player.pitch=Math.max(-1.5,Math.min(1.5,player.pitch));
       lookLast={x:t.clientX,y:t.clientY};
     }
   }
@@ -519,6 +520,7 @@ function gameOver(){
   finalCombo.textContent=maxCombo;
   if(score>best){ best=score; localStorage.setItem('neon_best',String(best)); bestEl.textContent=best; newRec.classList.remove('hidden'); }
   else newRec.classList.add('hidden');
+  if(window.Rank) Rank.submitScore('neon', score);
   setTimeout(()=>{ if(state===STATE.OVER) gameoverScreen.classList.remove('hidden'); },700);
 }
 

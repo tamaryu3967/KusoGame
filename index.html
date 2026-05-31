@@ -2,650 +2,217 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#1a1a2e">
-<title>💩 うんち回避！中年ダッシュ 💩</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a18">
+<title>KUSO ARCADE — ゲームセンター</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body {
-    width: 100%; height: 100%;
-    overflow: hidden;
-    background: #1a1a2e;
-    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
-    -webkit-user-select: none; user-select: none;
-    touch-action: manipulation;
-    overscroll-behavior: none;
-  }
-  #wrap {
-    position: fixed; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-  }
-  canvas { display: block; background: #87ceeb; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  :root{--cyan:#7df9ff;--mag:#ff2db6;--gold:#ffd24a;}
+  html,body{min-height:100%;background:#0a0a18;color:#eaf2ff;
+    font-family:"Trebuchet MS","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    -webkit-text-size-adjust:100%;}
+  body{background:
+    radial-gradient(circle at 20% 10%,rgba(0,234,255,.10),transparent 40%),
+    radial-gradient(circle at 80% 20%,rgba(255,45,182,.10),transparent 40%),
+    radial-gradient(circle at 50% 100%,rgba(255,210,74,.08),transparent 45%),
+    #0a0a18;
+    min-height:100vh;padding:max(env(safe-area-inset-top),18px) 16px 60px;}
+  .wrap{max-width:920px;margin:0 auto;}
 
-  .overlay {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    text-align: center; color: #fff;
-    padding: 24px;
-    background: rgba(10,10,30,0.82);
-    backdrop-filter: blur(3px);
-    z-index: 10;
-  }
-  .overlay.hidden { display: none; }
-  .hidden { display: none !important; }
+  header{text-align:center;margin:10px 0 26px;}
+  .logo{font-size:clamp(34px,10vw,68px);font-weight:900;letter-spacing:3px;line-height:1;
+    background:linear-gradient(90deg,var(--cyan),var(--mag),var(--gold));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 18px rgba(0,234,255,.35));animation:hue 8s linear infinite;}
+  @keyframes hue{to{filter:drop-shadow(0 0 18px rgba(0,234,255,.35)) hue-rotate(360deg);}}
+  .tag{margin-top:6px;font-size:clamp(12px,3.4vw,15px);letter-spacing:5px;color:#9fb0c8;}
 
-  .title {
-    font-size: clamp(26px, 8vw, 52px);
-    font-weight: 900;
-    line-height: 1.25;
-    text-shadow: 0 4px 0 #c0392b, 0 6px 14px rgba(0,0,0,.6);
-    margin-bottom: 8px;
-    animation: wobble 1.6s ease-in-out infinite;
-  }
-  @keyframes wobble {
-    0%,100% { transform: rotate(-2deg) scale(1); }
-    50% { transform: rotate(2deg) scale(1.04); }
-  }
-  .sub {
-    font-size: clamp(13px, 4vw, 18px);
-    opacity: .9; margin-bottom: 26px; line-height: 1.7;
-  }
-  .hint {
-    font-size: clamp(13px, 4vw, 17px);
-    color: #ffe66d;
-    margin-top: 18px;
-    animation: blink 1s steps(2,start) infinite;
-  }
-  @keyframes blink { 50% { opacity: .25; } }
+  .namebar{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;
+    margin:0 auto 28px;max-width:440px;background:rgba(255,255,255,.04);
+    border:1px solid rgba(125,249,255,.18);border-radius:12px;padding:12px 14px;}
+  .namebar label{font-size:13px;color:#9fb0c8;letter-spacing:1px;}
+  .namebar input{flex:1;min-width:120px;background:rgba(0,0,0,.4);border:1px solid rgba(125,249,255,.3);
+    border-radius:8px;color:#eaf2ff;font-size:16px;padding:9px 12px;outline:none;font-family:inherit;}
+  .namebar input:focus{border-color:var(--cyan);box-shadow:0 0 10px rgba(0,234,255,.4);}
+  .namebar .saved{font-size:12px;color:#00ffa3;opacity:0;transition:opacity .3s;}
 
-  .btn {
-    display: inline-block;
-    font-size: clamp(18px, 6vw, 26px);
-    font-weight: 900;
-    color: #fff;
-    background: linear-gradient(180deg,#ff7e5f,#e84118);
-    border: none; border-radius: 999px;
-    padding: 16px 42px;
-    box-shadow: 0 6px 0 #a93226, 0 10px 20px rgba(0,0,0,.4);
-    cursor: pointer;
-    transition: transform .05s, box-shadow .05s;
-  }
-  .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #a93226, 0 4px 10px rgba(0,0,0,.4); }
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-bottom:38px;}
+  .card{position:relative;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.1);
+    background:#11131f;text-decoration:none;color:inherit;display:flex;flex-direction:column;
+    transition:transform .12s, box-shadow .12s;min-height:210px;}
+  .card:active{transform:scale(.98);}
+  .card .cover{flex:1;display:flex;align-items:center;justify-content:center;font-size:64px;
+    min-height:118px;position:relative;}
+  .card .body{padding:13px 15px 16px;background:rgba(0,0,0,.32);}
+  .card h3{font-size:18px;font-weight:900;letter-spacing:1px;margin-bottom:3px;}
+  .card .genre{font-size:11px;letter-spacing:2px;opacity:.8;margin-bottom:6px;}
+  .card .desc{font-size:12.5px;line-height:1.55;color:#c4cfe0;min-height:38px;}
+  .card .foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;}
+  .card .best{font-size:12px;color:var(--gold);}
+  .card .play{font-size:13px;font-weight:900;letter-spacing:1px;padding:7px 16px;border-radius:999px;}
 
-  .gameover-msg {
-    font-size: clamp(20px, 6.5vw, 34px);
-    font-weight: 900; color: #ff6b6b;
-    margin-bottom: 14px; line-height: 1.35;
-  }
-  .score-line { font-size: clamp(16px,5vw,22px); margin: 4px 0; }
-  .score-line b { color: #ffe66d; font-size: 1.4em; }
-  .newrec {
-    color:#2ecc71; font-weight:900; font-size: clamp(16px,5vw,22px);
-    margin: 8px 0; animation: pop .5s ease;
-  }
-  @keyframes pop { 0%{transform:scale(.3);opacity:0} 70%{transform:scale(1.2)} 100%{transform:scale(1)} }
+  .c-runner .cover{background:radial-gradient(circle,#3a2a12,#1a1206);}
+  .c-runner h3{color:#ffb86b;} .c-runner .play{background:#ff8c3b;color:#1a1206;}
+  .c-neon .cover{background:radial-gradient(circle,#06243a,#04101f);}
+  .c-neon h3{color:var(--cyan);} .c-neon .play{background:var(--cyan);color:#04101f;}
+  .c-horror .cover{background:radial-gradient(circle,#1c0f0f,#080404);}
+  .c-horror h3{color:#d9b27a;} .c-horror .play{background:#c9a05a;color:#1a0d0d;}
+  .card:hover{box-shadow:0 0 26px rgba(0,234,255,.18);}
+  .badge{position:absolute;top:10px;right:10px;font-size:10px;letter-spacing:1px;
+    background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:3px 7px;}
 
-  .mute {
-    position: absolute; top: env(safe-area-inset-top, 8px); right: 10px;
-    z-index: 20; font-size: 24px; background: rgba(0,0,0,.3);
-    border: none; color: #fff; border-radius: 50%;
-    width: 44px; height: 44px; cursor: pointer;
-  }
-  .credit { position:absolute; bottom: 10px; font-size: 11px; opacity:.5; color:#fff; }
+  .rank-sec{margin-top:8px;}
+  .rank-head{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:16px;}
+  .rank-head h2{font-size:clamp(20px,6vw,30px);font-weight:900;letter-spacing:3px;
+    color:#fff;text-shadow:0 0 16px rgba(255,210,74,.5);}
+  .tabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;}
+  .tab{cursor:pointer;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.04);
+    color:#c4cfe0;border-radius:999px;padding:9px 16px;font-size:13px;font-weight:700;letter-spacing:1px;
+    font-family:inherit;transition:all .15s;}
+  .tab.active{background:rgba(125,249,255,.16);border-color:var(--cyan);color:#fff;
+    box-shadow:0 0 12px rgba(0,234,255,.35);}
+
+  .board{max-width:520px;margin:0 auto;background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;}
+  .board .brow{display:grid;grid-template-columns:54px 1fr auto;align-items:center;gap:8px;
+    padding:11px 16px;border-bottom:1px solid rgba(255,255,255,.06);font-size:15px;}
+  .board .brow:last-child{border-bottom:none;}
+  .board .brow .pos{font-weight:900;font-size:16px;color:#9fb0c8;text-align:center;}
+  .board .brow.top1 .pos{color:#ffd24a;} .board .brow.top2 .pos{color:#d6e0ee;} .board .brow.top3 .pos{color:#e08b4a;}
+  .board .brow.me{background:rgba(125,249,255,.08);}
+  .board .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .board .sc{font-weight:900;color:var(--gold);font-variant-numeric:tabular-nums;}
+  .board .empty{padding:26px 16px;text-align:center;color:#8a96aa;font-size:14px;}
+  .board-foot{text-align:center;margin-top:10px;}
+  .board-foot button{background:none;border:none;color:#5a6678;font-size:11px;cursor:pointer;
+    text-decoration:underline;font-family:inherit;letter-spacing:1px;}
+  .metric-note{text-align:center;font-size:11px;color:#7a8698;margin-top:8px;letter-spacing:1px;}
+  footer{text-align:center;margin-top:40px;font-size:11px;color:#566;letter-spacing:1px;}
 </style>
 </head>
 <body>
-<div id="wrap">
-  <canvas id="game"></canvas>
+<div class="wrap">
+  <header>
+    <div class="logo">KUSO ARCADE</div>
+    <div class="tag">ゲームセンター</div>
+  </header>
 
-  <button id="muteBtn" class="mute" title="音">🔊</button>
+  <div class="namebar">
+    <label for="nameInput">プレイヤー名</label>
+    <input id="nameInput" maxlength="16" placeholder="ナナシ" autocomplete="off" spellcheck="false">
+    <span class="saved" id="savedMsg">✓ 保存</span>
+  </div>
 
-  <div id="startScreen" class="overlay">
-    <div class="title">💩<br>うんち回避！<br>中年ダッシュ</div>
-    <div class="sub">
-      終電を逃した中年が全力疾走！<br>
-      道に落ちた💩を踏んだら即・人生終了。<br>
-      🍙を拾って意地でも生き延びろ。
+  <div class="grid" id="gameGrid">
+    <a class="card c-runner" href="./runner.html">
+      <div class="cover">🏃💨💩<span class="badge">2D</span></div>
+      <div class="body">
+        <h3>中年ダッシュ</h3>
+        <div class="genre">ENDLESS RUNNER</div>
+        <div class="desc">終電を逃した中年が全力疾走。💩を避け🍙を拾って何メートル走れるか。</div>
+        <div class="foot"><span class="best" id="best-runner">BEST —</span><span class="play">▶ PLAY</span></div>
+      </div>
+    </a>
+    <a class="card c-neon" href="./neon-blaster.html">
+      <div class="cover">🔫✨<span class="badge">3D</span></div>
+      <div class="body">
+        <h3>NEON BLASTER</h3>
+        <div class="genre">3D ARENA SHOOTER</div>
+        <div class="desc">ネオンの群れを撃ち尽くす全方位シューター。コンボを繋いでハイスコアを。</div>
+        <div class="foot"><span class="best" id="best-neon">BEST —</span><span class="play">▶ PLAY</span></div>
+      </div>
+    </a>
+    <a class="card c-horror" href="./horror.html">
+      <div class="cover">🕯️👁️<span class="badge">3D</span></div>
+      <div class="body">
+        <h3>祓 — 八つのお札</h3>
+        <div class="genre">3D HORROR</div>
+        <div class="desc">闇の森でお札8枚を集めて生還せよ。「それ」に捕まる前に。最速クリアを狙え。</div>
+        <div class="foot"><span class="best" id="best-horror">BEST —</span><span class="play">▶ PLAY</span></div>
+      </div>
+    </a>
+  </div>
+
+  <div class="rank-sec">
+    <div class="rank-head"><h2>🏆 RANKING</h2></div>
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-game="runner">💩 中年ダッシュ</button>
+      <button class="tab" data-game="neon">🎮 NEON</button>
+      <button class="tab" data-game="horror">🕯️ 祓</button>
     </div>
-    <button id="startBtn" class="btn">▶ スタート</button>
-    <div class="hint">タップ / クリック / スペースでジャンプ（2段ジャンプ可）</div>
-    <a href="./neon-blaster.html" style="margin-top:22px;display:inline-block;color:#7df9ff;
-       font-size:clamp(13px,4vw,16px);font-weight:700;text-decoration:none;
-       text-shadow:0 0 10px #00eaff;">🎮 3Dシューター「NEON BLASTER」で遊ぶ →</a>
-    <a href="./horror.html" style="margin-top:12px;display:inline-block;color:#c9b27a;
-       font-size:clamp(13px,4vw,16px);font-weight:700;text-decoration:none;
-       text-shadow:0 0 10px #803000;">🕯️ 3Dホラー「祓 — 八つのお札」で遊ぶ →</a>
+    <div class="board" id="board"></div>
+    <div class="metric-note" id="metricNote"></div>
+    <div class="board-foot"><button id="clearBtn">この記録を消す</button></div>
   </div>
 
-  <div id="gameoverScreen" class="overlay hidden">
-    <div id="goMsg" class="gameover-msg"></div>
-    <div id="newRec" class="newrec hidden">🎉 自己ベスト更新！ 🎉</div>
-    <div class="score-line">きょうの記録 <b id="finalScore">0</b> m</div>
-    <div class="score-line">最高記録 <span id="bestScore">0</span> m ／ 🍙 <span id="finalOni">0</span>個</div>
-    <button id="retryBtn" class="btn" style="margin-top:22px;">🔁 もう一回</button>
-    <div class="hint">タップでリスタート</div>
-  </div>
-
-  <div class="credit">KusoGame™ — 中年は今日も走る</div>
+  <footer>記録はこの端末に保存されます（ローカルランキング）</footer>
 </div>
 
+<script src="./rank.js"></script>
 <script>
-(() => {
+(function(){
   "use strict";
+  var R = window.Rank;
+  var nameInput = document.getElementById('nameInput');
+  var savedMsg = document.getElementById('savedMsg');
+  var board = document.getElementById('board');
+  var tabs = document.getElementById('tabs');
+  var metricNote = document.getElementById('metricNote');
+  var clearBtn = document.getElementById('clearBtn');
+  var current = 'runner';
 
-  const canvas = document.getElementById("game");
-  const ctx = canvas.getContext("2d");
+  // name
+  nameInput.value = R.getName();
+  var saveT;
+  function saveName(){ R.setName(nameInput.value);
+    savedMsg.style.opacity='1'; clearTimeout(saveT); saveT=setTimeout(function(){savedMsg.style.opacity='0';},1200); }
+  nameInput.addEventListener('input', saveName);
+  nameInput.addEventListener('blur', saveName);
 
-  // ---- screens ----
-  const startScreen = document.getElementById("startScreen");
-  const gameoverScreen = document.getElementById("gameoverScreen");
-  const startBtn = document.getElementById("startBtn");
-  const retryBtn = document.getElementById("retryBtn");
-  const goMsg = document.getElementById("goMsg");
-  const newRec = document.getElementById("newRec");
-  const finalScoreEl = document.getElementById("finalScore");
-  const bestScoreEl = document.getElementById("bestScore");
-  const finalOniEl = document.getElementById("finalOni");
-  const muteBtn = document.getElementById("muteBtn");
-
-  // ---- view / sizing ----
-  let W = 0, H = 0, DPR = 1;
-  let groundY = 0;
-
-  function resize() {
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
-    W = window.innerWidth;
-    H = window.innerHeight;
-    canvas.width = Math.floor(W * DPR);
-    canvas.height = Math.floor(H * DPR);
-    canvas.style.width = W + "px";
-    canvas.style.height = H + "px";
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    groundY = H * 0.82;
-  }
-  window.addEventListener("resize", resize);
-  resize();
-
-  // ---- audio (tiny beeps, no assets) ----
-  let actx = null, muted = false;
-  function ensureAudio() {
-    if (!actx) {
-      try { actx = new (window.AudioContext || window.webkitAudioContext)(); }
-      catch (e) { actx = null; }
-    }
-    if (actx && actx.state === "suspended") actx.resume();
-  }
-  function beep(freq, dur, type, vol) {
-    if (muted || !actx) return;
-    const o = actx.createOscillator();
-    const g = actx.createGain();
-    o.type = type || "square";
-    o.frequency.value = freq;
-    g.gain.value = vol || 0.08;
-    o.connect(g); g.connect(actx.destination);
-    const t = actx.currentTime;
-    g.gain.setValueAtTime(g.gain.value, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.start(t); o.stop(t + dur);
-  }
-  const sfx = {
-    jump:  () => beep(520, 0.12, "square", 0.06),
-    jump2: () => beep(720, 0.12, "square", 0.06),
-    coin:  () => { beep(880,0.07,"triangle",0.09); setTimeout(()=>beep(1180,0.09,"triangle",0.09),60); },
-    die:   () => { beep(200,0.18,"sawtooth",0.12); setTimeout(()=>beep(120,0.3,"sawtooth",0.12),120); },
-    step:  () => beep(160,0.05,"sine",0.03),
-  };
-  muteBtn.addEventListener("click", () => {
-    muted = !muted;
-    muteBtn.textContent = muted ? "🔇" : "🔊";
+  // best on cards
+  ['runner','neon','horror'].forEach(function(g){
+    var t = R.top(g,1); var c = R.CFG[g];
+    var el = document.getElementById('best-'+g);
+    el.textContent = t.length ? ('BEST '+t[0].s+c.unit) : 'BEST —';
   });
 
-  // ---- game state ----
-  const STATE = { START: 0, PLAY: 1, OVER: 2 };
-  let state = STATE.START;
+  function fmtDate(ts){ var d=new Date(ts); return (d.getMonth()+1)+'/'+d.getDate(); }
 
-  let player, obstacles, items, particles, clouds, buildings;
-  let speed, baseSpeed, distance, oniCount, spawnTimer, itemTimer, shake, runFrame;
-  let best = +(localStorage.getItem("kuso_best") || 0);
-
-  const GRAVITY = 2400;       // px/s^2
-  const JUMP_V = -860;        // px/s
-  const MAX_JUMPS = 2;
-
-  function reset() {
-    const size = Math.max(34, Math.min(W, H) * 0.085);
-    player = {
-      x: W * 0.18,
-      y: groundY,
-      vy: 0,
-      size: size,
-      onGround: true,
-      jumps: 0,
-      rot: 0,
-    };
-    obstacles = [];
-    items = [];
-    particles = [];
-    clouds = [];
-    buildings = [];
-    baseSpeed = Math.max(360, W * 0.55);
-    speed = baseSpeed;
-    distance = 0;
-    oniCount = 0;
-    spawnTimer = 0.6;
-    itemTimer = 1.4;
-    shake = 0;
-    runFrame = 0;
-
-    // parallax clouds
-    for (let i = 0; i < 5; i++) {
-      clouds.push({ x: Math.random()*W, y: H*0.1 + Math.random()*H*0.3, s: 0.4+Math.random()*0.6, scale: 0.7+Math.random()*0.9 });
-    }
-    // parallax buildings
-    let bx = 0;
-    while (bx < W + 200) {
-      const bw = 50 + Math.random()*70;
-      const bh = H*0.12 + Math.random()*H*0.22;
-      buildings.push({ x: bx, w: bw, h: bh, c: ["#6c5ce7","#a29bfe","#74b9ff","#81ecec"][Math.floor(Math.random()*4)] });
-      bx += bw + 10;
-    }
+  function renderBoard(game){
+    var c = R.CFG[game];
+    var list = R.top(game, 10);
+    var myName = R.getName() || 'ナナシ';
+    metricNote.textContent = c.metric + ' で順位付け（'+(c.asc?'小さいほど上位':'大きいほど上位')+'）';
+    if(!list.length){ board.innerHTML = '<div class="empty">まだ記録がありません。<br>プレイして1位を取ろう！</div>'; return; }
+    var html='';
+    list.forEach(function(e,i){
+      var cls = 'brow'+(i<3?(' top'+(i+1)):'');
+      if(e.n===myName) cls+=' me';
+      html += '<div class="'+cls+'">'
+        + '<div class="pos">'+(i===0?'👑':(i+1))+'</div>'
+        + '<div class="nm">'+escapeHtml(e.n)+' <span style="opacity:.45;font-size:11px">'+fmtDate(e.t)+'</span></div>'
+        + '<div class="sc">'+e.s+'<span style="font-size:11px;color:#9fb0c8;font-weight:400"> '+c.unit+'</span></div>'
+        + '</div>';
+    });
+    board.innerHTML = html;
   }
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
 
-  // obstacle definitions (踏むと即死)
-  const OBSTACLES = [
-    { emoji: "💩", label: "うんち" },
-    { emoji: "🍌", label: "バナナの皮" },
-    { emoji: "🚧", label: "工事中" },
-    { emoji: "🐈", label: "寝猫" },
-    { emoji: "🗑️", label: "ゴミ箱" },
-    { emoji: "🦴", label: "謎の骨" },
-  ];
-
-  const DEATH_MSGS = [
-    "💩 を踏んで即・人生終了。",
-    "華麗に転倒。立てない、もう立てない。",
-    "終電？とっくに行きました。",
-    "膝が…膝がもう限界です…！",
-    "中年、アスファルトと一体化。",
-    "ぬるっといった。完全にぬるっといった。",
-    "明日の会議、欠席で。",
-    "腰にきた。完全に腰にきた。",
-  ];
-
-  // ---- input ----
-  function jump() {
-    if (state === STATE.START) { startGame(); return; }
-    if (state === STATE.OVER) { startGame(); return; }
-    if (state !== STATE.PLAY) return;
-    if (player.jumps < MAX_JUMPS) {
-      player.vy = JUMP_V * (player.jumps === 0 ? 1 : 0.85);
-      player.onGround = false;
-      player.jumps++;
-      if (player.jumps === 1) sfx.jump(); else sfx.jump2();
-      // jump puff
-      for (let i=0;i<6;i++) spawnParticle(player.x, player.y, "#ffffff", -1);
-    }
-  }
-
-  function onPress(e) {
-    ensureAudio();
-    if (e.cancelable) e.preventDefault();
-    jump();
-  }
-  canvas.addEventListener("touchstart", onPress, { passive: false });
-  canvas.addEventListener("mousedown", onPress);
-  window.addEventListener("keydown", (e) => {
-    if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); ensureAudio(); jump(); }
+  tabs.addEventListener('click', function(e){
+    var b = e.target.closest('.tab'); if(!b) return;
+    current = b.dataset.game;
+    Array.prototype.forEach.call(tabs.children, function(t){ t.classList.toggle('active', t===b); });
+    renderBoard(current);
   });
 
-  startBtn.addEventListener("click", (e) => { e.stopPropagation(); ensureAudio(); startGame(); });
-  retryBtn.addEventListener("click", (e) => { e.stopPropagation(); ensureAudio(); startGame(); });
-
-  function startGame() {
-    reset();
-    state = STATE.PLAY;
-    startScreen.classList.add("hidden");
-    gameoverScreen.classList.add("hidden");
-    lastT = performance.now();
-  }
-
-  function gameOver() {
-    state = STATE.OVER;
-    sfx.die();
-    shake = 22;
-    const m = Math.floor(distance);
-    finalScoreEl.textContent = m;
-    finalOniEl.textContent = oniCount;
-    goMsg.textContent = DEATH_MSGS[Math.floor(Math.random()*DEATH_MSGS.length)];
-    if (m > best) {
-      best = m;
-      localStorage.setItem("kuso_best", String(best));
-      newRec.classList.remove("hidden");
-    } else {
-      newRec.classList.add("hidden");
+  clearBtn.addEventListener('click', function(){
+    if(confirm(R.CFG[current].title+' のランキング記録を消去します。よろしいですか？')){
+      R.clear(current); renderBoard(current);
+      var t=R.top(current,1); document.getElementById('best-'+current).textContent = t.length?('BEST '+t[0].s+R.CFG[current].unit):'BEST —';
     }
-    bestScoreEl.textContent = best;
-    // delay showing overlay so death animation reads
-    setTimeout(() => { if (state === STATE.OVER) gameoverScreen.classList.remove("hidden"); }, 650);
-  }
+  });
 
-  // ---- particles ----
-  function spawnParticle(x, y, color, dir) {
-    particles.push({
-      x, y,
-      vx: (Math.random()-0.5) * 260 * (dir||1) - 80,
-      vy: -Math.random()*320 - 60,
-      life: 0.5 + Math.random()*0.4,
-      maxLife: 0.9,
-      color,
-      size: 3 + Math.random()*5,
-    });
-  }
-
-  // ---- spawning ----
-  function spawnObstacle() {
-    const o = OBSTACLES[Math.floor(Math.random()*OBSTACLES.length)];
-    const size = player.size * (0.75 + Math.random()*0.35);
-    obstacles.push({
-      x: W + size,
-      y: groundY,
-      size,
-      emoji: o.emoji,
-      passed: false,
-    });
-  }
-  function spawnItem() {
-    // onigiri sometimes floats high (rewards jumping)
-    const high = Math.random() < 0.5;
-    items.push({
-      x: W + 30,
-      y: high ? groundY - player.size*2.4 : groundY - player.size*0.6,
-      size: player.size * 0.7,
-      emoji: "🍙",
-      taken: false,
-      bob: Math.random()*Math.PI*2,
-    });
-  }
-
-  // ---- update ----
-  let lastT = performance.now();
-  function update(dt) {
-    distance += speed * dt * 0.02;
-    speed = baseSpeed + Math.min(distance * 1.4, baseSpeed * 1.8);
-
-    // player physics
-    player.vy += GRAVITY * dt;
-    player.y += player.vy * dt;
-    if (player.y >= groundY) {
-      if (!player.onGround && player.vy > 0) {
-        // landing dust
-        for (let i=0;i<5;i++) spawnParticle(player.x, groundY, "#d9c7a8", 1);
-        sfx.step();
-      }
-      player.y = groundY;
-      player.vy = 0;
-      player.onGround = true;
-      player.jumps = 0;
-    }
-    // running animation frame
-    runFrame += dt * (player.onGround ? 14 : 0);
-
-    // parallax
-    for (const c of clouds) {
-      c.x -= speed * c.s * 0.15 * dt;
-      if (c.x < -80*c.scale) { c.x = W + 60; c.y = H*0.1 + Math.random()*H*0.3; }
-    }
-    for (const b of buildings) {
-      b.x -= speed * 0.35 * dt;
-    }
-    // recycle buildings
-    let rightMost = 0;
-    for (const b of buildings) rightMost = Math.max(rightMost, b.x + b.w);
-    for (const b of buildings) {
-      if (b.x + b.w < -20) {
-        b.x = rightMost + 10;
-        b.w = 50 + Math.random()*70;
-        b.h = H*0.12 + Math.random()*H*0.22;
-        rightMost = b.x + b.w;
-      }
-    }
-
-    // spawn obstacles
-    spawnTimer -= dt;
-    if (spawnTimer <= 0) {
-      spawnObstacle();
-      // gap shrinks as speed grows, but keep it survivable
-      const minGap = 0.62, maxGap = 1.25;
-      const t = Math.min(distance / 600, 1);
-      spawnTimer = (maxGap - (maxGap-minGap)*t) * (0.85 + Math.random()*0.5);
-    }
-    itemTimer -= dt;
-    if (itemTimer <= 0) {
-      spawnItem();
-      itemTimer = 1.1 + Math.random()*1.6;
-    }
-
-    // move obstacles
-    const px = player.x, ph = player.size;
-    for (const ob of obstacles) {
-      ob.x -= speed * dt;
-    }
-    obstacles = obstacles.filter(ob => ob.x > -ob.size*1.5);
-
-    // move items + bob
-    for (const it of items) {
-      it.x -= speed * dt;
-      it.bob += dt * 6;
-    }
-    items = items.filter(it => it.x > -it.size*1.5 && !it.taken);
-
-    // collisions — obstacles (forgiving hitbox)
-    for (const ob of obstacles) {
-      const dx = Math.abs(ob.x - px);
-      const collideX = dx < (ob.size*0.36 + ph*0.30);
-      // player bottom must be near ground / obstacle to count as "踏む"
-      const playerBottom = player.y;
-      const obTop = ob.y - ob.size*0.85;
-      const collideY = playerBottom > obTop;
-      if (collideX && collideY) {
-        // splat particles
-        const col = ob.emoji === "💩" ? "#8b5a2b" : "#e74c3c";
-        for (let i=0;i<16;i++) spawnParticle(player.x, player.y - ph*0.4, col, 1);
-        gameOver();
-        return;
-      }
-    }
-
-    // collisions — items
-    for (const it of items) {
-      if (it.taken) continue;
-      const dx = Math.abs(it.x - px);
-      const dy = Math.abs((it.y) - (player.y - ph*0.6));
-      if (dx < (it.size*0.5 + ph*0.4) && dy < (it.size*0.6 + ph*0.6)) {
-        it.taken = true;
-        oniCount++;
-        distance += 15; // bonus meters
-        sfx.coin();
-        for (let i=0;i<8;i++) spawnParticle(it.x, it.y, "#ffe66d", 1);
-      }
-    }
-
-    // particles
-    for (const p of particles) {
-      p.vy += 900 * dt;
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      p.life -= dt;
-    }
-    particles = particles.filter(p => p.life > 0);
-
-    if (shake > 0) shake = Math.max(0, shake - dt * 60);
-  }
-
-  // ---- draw ----
-  function draw() {
-    ctx.save();
-    if (shake > 0) {
-      const sx = (Math.random()-0.5) * shake;
-      const sy = (Math.random()-0.5) * shake;
-      ctx.translate(sx, sy);
-    }
-
-    // sky gradient
-    const sky = ctx.createLinearGradient(0,0,0,H);
-    sky.addColorStop(0, "#5eb3e4");
-    sky.addColorStop(0.7, "#afe0f5");
-    sky.addColorStop(1, "#e8f7ff");
-    ctx.fillStyle = sky;
-    ctx.fillRect(-40,-40,W+80,H+80);
-
-    // sun
-    ctx.fillStyle = "rgba(255,241,118,0.9)";
-    ctx.beginPath(); ctx.arc(W*0.82, H*0.18, Math.min(W,H)*0.07, 0, Math.PI*2); ctx.fill();
-
-    // clouds
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    for (const c of clouds) {
-      drawCloud(c.x, c.y, 26*c.scale);
-    }
-
-    // buildings (parallax)
-    for (const b of buildings) {
-      ctx.fillStyle = b.c;
-      ctx.globalAlpha = 0.75;
-      ctx.fillRect(b.x, groundY - b.h, b.w, b.h);
-      // windows
-      ctx.fillStyle = "rgba(255,255,255,0.5)";
-      for (let wy = groundY - b.h + 10; wy < groundY - 12; wy += 22) {
-        for (let wx = b.x + 8; wx < b.x + b.w - 10; wx += 18) {
-          ctx.fillRect(wx, wy, 8, 11);
-        }
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    // ground
-    ctx.fillStyle = "#5a4633";
-    ctx.fillRect(0, groundY, W, H - groundY);
-    ctx.fillStyle = "#6b5640";
-    ctx.fillRect(0, groundY, W, 8);
-    // road dashes
-    ctx.fillStyle = "rgba(255,235,150,0.7)";
-    const dashW = 38, gap = 34;
-    const offset = (distance * 6) % (dashW + gap);
-    for (let x = -offset; x < W; x += dashW + gap) {
-      ctx.fillRect(x, groundY + (H-groundY)*0.45, dashW, 6);
-    }
-
-    // items (onigiri)
-    for (const it of items) {
-      const bobY = Math.sin(it.bob) * 6;
-      drawEmoji(it.emoji, it.x, it.y + bobY, it.size);
-    }
-
-    // obstacles
-    for (const ob of obstacles) {
-      drawEmoji(ob.emoji, ob.x, ob.y - ob.size*0.5, ob.size);
-    }
-
-    // player
-    drawPlayer();
-
-    // particles
-    for (const p of particles) {
-      ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
-      ctx.fillStyle = p.color;
-      ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
-    }
-    ctx.globalAlpha = 1;
-
-    ctx.restore();
-
-    // HUD
-    if (state === STATE.PLAY || state === STATE.OVER) {
-      ctx.fillStyle = "#1a1a2e";
-      ctx.font = "900 " + Math.round(Math.min(W,H)*0.06) + "px sans-serif";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "top";
-      const pad = 14 + (window.innerWidth > 0 ? 0 : 0);
-      ctx.fillText(Math.floor(distance) + " m", 16, 14);
-      ctx.font = "900 " + Math.round(Math.min(W,H)*0.045) + "px sans-serif";
-      ctx.fillText("🍙 " + oniCount, 16, 14 + Math.min(W,H)*0.07);
-      // best
-      ctx.textAlign = "right";
-      ctx.fillStyle = "rgba(26,26,46,0.65)";
-      ctx.fillText("最高 " + best + "m", W - 64, 18);
-    }
-  }
-
-  function drawCloud(x, y, r) {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI*2);
-    ctx.arc(x + r, y + 4, r*0.8, 0, Math.PI*2);
-    ctx.arc(x - r, y + 6, r*0.7, 0, Math.PI*2);
-    ctx.arc(x + r*0.4, y - r*0.6, r*0.7, 0, Math.PI*2);
-    ctx.fill();
-  }
-
-  function drawEmoji(emoji, cx, cy, size) {
-    ctx.font = size + "px serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(emoji, cx, cy);
-  }
-
-  function drawPlayer() {
-    const s = player.size;
-    ctx.save();
-    ctx.translate(player.x, player.y - s*0.5);
-    // shadow
-    const grShadow = player.onGround ? 1 : Math.max(0.2, 1 - (groundY - player.y)/300);
-    ctx.save();
-    ctx.translate(0, s*0.5);
-    ctx.scale(1, 0.35);
-    ctx.fillStyle = "rgba(0,0,0," + (0.25*grShadow) + ")";
-    ctx.beginPath(); ctx.arc(0, 0, s*0.42*grShadow, 0, Math.PI*2); ctx.fill();
-    ctx.restore();
-
-    // bob / lean
-    let bob = 0, lean = 0;
-    if (player.onGround) {
-      bob = Math.abs(Math.sin(runFrame)) * s*0.06;
-    } else {
-      lean = player.vy < 0 ? -0.12 : 0.12;
-    }
-    ctx.rotate(lean);
-    ctx.translate(0, -bob);
-
-    // running middle-aged man emoji
-    ctx.font = s + "px serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    // mirror so he faces right
-    ctx.save();
-    ctx.scale(-1, 1);
-    ctx.fillText("🏃", 0, 0);
-    ctx.restore();
-
-    ctx.restore();
-  }
-
-  // ---- main loop ----
-  function frame(now) {
-    let dt = (now - lastT) / 1000;
-    lastT = now;
-    if (dt > 0.05) dt = 0.05; // clamp big gaps
-    if (state === STATE.PLAY) update(dt);
-    draw();
-    requestAnimationFrame(frame);
-  }
-
-  // first paint of start screen background
-  reset();
-  requestAnimationFrame(frame);
+  renderBoard(current);
 })();
 </script>
 </body>

@@ -170,8 +170,9 @@
   <div class="hint">タップ / クリックでやり直す</div>
 </div>
 
-<a class="back" href="./index.html">← トップに戻る</a>
+<a class="back" href="./index.html">← ハブに戻る</a>
 
+<script src="./rank.js"></script>
 <script type="module">
 import * as THREE from 'three';
 
@@ -365,8 +366,8 @@ addEventListener('keydown',e=>{ keys[e.code]=true;
   if(e.code==='Escape'&&state===STATE.PLAY){ if(document.pointerLockElement)document.exitPointerLock(); }});
 addEventListener('keyup',e=>{ keys[e.code]=false; });
 function onMouseMove(e){ if(state!==STATE.PLAY)return; if(document.pointerLockElement!==renderer.domElement)return;
-  player.yaw-=e.movementX*0.0022; player.pitch-=e.movementY*0.0022;
-  player.pitch=Math.max(-1.1,Math.min(1.1,player.pitch)); }
+  player.yaw-=e.movementX*0.0022; player.pitch+=e.movementY*0.0022;
+  player.pitch=Math.max(-1.5,Math.min(1.5,player.pitch)); }
 document.addEventListener('mousemove',onMouseMove);
 app.addEventListener('mousedown',()=>{ if(state===STATE.PLAY&&!isTouch)lockPointer(); });
 function lockPointer(){ if(!isTouch&&renderer.domElement.requestPointerLock)renderer.domElement.requestPointerLock(); }
@@ -383,8 +384,8 @@ function tMove(e){ if(state!==STATE.PLAY)return; e.preventDefault();
     if(t.identifier===moveId){ let dx=t.clientX-stickO.x,dy=t.clientY-stickO.y; const m=50,l=Math.hypot(dx,dy);
       if(l>m){dx=dx/l*m;dy=dy/l*m;} stickKnob.style.left=(50+dx/m*44)+'%'; stickKnob.style.top=(50+dy/m*44)+'%';
       move.x=dx/m; move.y=dy/m; }
-    else if(t.identifier===lookId){ player.yaw-=(t.clientX-lookLast.x)*0.005; player.pitch-=(t.clientY-lookLast.y)*0.005;
-      player.pitch=Math.max(-1.1,Math.min(1.1,player.pitch)); lookLast={x:t.clientX,y:t.clientY}; } } }
+    else if(t.identifier===lookId){ player.yaw-=(t.clientX-lookLast.x)*0.005; player.pitch+=(t.clientY-lookLast.y)*0.005;
+      player.pitch=Math.max(-1.5,Math.min(1.5,player.pitch)); lookLast={x:t.clientX,y:t.clientY}; } } }
 function tEnd(e){ for(const t of e.changedTouches){
   if(t.identifier===moveId){ moveId=null; move.x=0;move.y=0; stickEl.style.display='none'; }
   if(t.identifier===lookId) lookId=null; } }
@@ -432,6 +433,7 @@ function win(){
   if(best===0||t<best){ best=t; localStorage.setItem('harae_best',String(best)); winRec.classList.remove('hidden'); }
   else winRec.classList.add('hidden');
   winBest.textContent=best||'—';
+  if(window.Rank) Rank.submitScore('horror', t);
   winScreen.classList.remove('hidden');
 }
 
