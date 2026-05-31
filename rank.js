@@ -10,7 +10,8 @@ window.Rank = (function () {
   var CFG = {
     runner: { asc: false, unit: 'm',  emoji: '💩', title: 'うんち回避！中年ダッシュ', metric: '距離' },
     neon:   { asc: false, unit: 'pt', emoji: '🎮', title: 'NEON BLASTER',            metric: 'スコア' },
-    horror: { asc: true,  unit: '秒', emoji: '🕯️', title: '祓 — 八つのお札',          metric: 'クリア最速' }
+    horror: { asc: true,  unit: '秒', emoji: '🕯️', title: '祓 — 八つのお札',          metric: 'クリア最速' },
+    escape: { asc: true,  unit: '秒', emoji: '🔐', title: '密室からの脱出',           metric: 'クリア最速' }
   };
 
   // ---------- local (localStorage) ----------
@@ -48,7 +49,7 @@ window.Rank = (function () {
         if (s.parentNode) s.parentNode.removeChild(s);
         resolve(v);
       }
-      window[cb] = function (res) { fin(res && res.rows ? res.rows : null); };
+      window[cb] = function (res) { fin(res && res.ok && res.rows ? res.rows : null); };
       s.onerror = function () { fin(null); };
       s.src = API + '?action=top&game=' + encodeURIComponent(game) + '&limit=' + (limit || 10) + '&callback=' + cb;
       document.head.appendChild(s);

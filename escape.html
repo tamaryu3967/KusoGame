@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1a1626">
+<title>密室からの脱出 — KUSO ARCADE</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{width:100%;height:100%;overflow:hidden;
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
+    background:#0e0b16;color:#ece8f5;-webkit-user-select:none;user-select:none;
+    touch-action:manipulation;overscroll-behavior:none;}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;}
+
+  /* top bar */
+  #bar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:max(env(safe-area-inset-top),8px) 10px 8px;
+    background:rgba(0,0,0,.35);border-bottom:1px solid rgba(180,160,220,.18);z-index:5;}
+  #bar .ttl{font-weight:900;letter-spacing:1px;font-size:clamp(14px,4.2vw,18px);color:#d9c7ff;}
+  #bar .timer{margin-left:auto;font-variant-numeric:tabular-nums;font-size:clamp(14px,4vw,18px);
+    font-weight:800;color:#ffe27a;letter-spacing:1px;}
+  .topbtn{border:1px solid rgba(180,160,220,.35);background:rgba(255,255,255,.06);color:#ece8f5;
+    border-radius:8px;padding:7px 11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .topbtn:active{background:rgba(255,255,255,.15);}
+
+  /* room */
+  #room{flex:1 1 auto;position:relative;overflow:hidden;
+    background:
+      linear-gradient(180deg,#2a2440 0%,#211c34 55%,#171327 55%,#120f1f 100%);}
+  #room::after{content:"";position:absolute;left:0;right:0;top:55%;height:2px;background:rgba(0,0,0,.4);}
+  .hot{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    cursor:pointer;transform:translate(-50%,-50%);transition:transform .08s, filter .15s;
+    filter:drop-shadow(0 4px 6px rgba(0,0,0,.5));}
+  .hot:active{transform:translate(-50%,-50%) scale(.92);}
+  .hot .ic{font-size:clamp(34px,11vw,64px);line-height:1;}
+  .hot .lb{margin-top:2px;font-size:11px;letter-spacing:1px;color:#cbbfe6;
+    background:rgba(0,0,0,.4);padding:1px 7px;border-radius:8px;white-space:nowrap;}
+  .hot.solved .lb{color:#8fe;}
+  .glint{animation:glint 2.2s ease-in-out infinite;}
+  @keyframes glint{0%,100%{filter:drop-shadow(0 4px 6px rgba(0,0,0,.5));}
+    50%{filter:drop-shadow(0 0 10px rgba(255,226,122,.8)) drop-shadow(0 4px 6px rgba(0,0,0,.5));}}
+
+  /* message bar */
+  #msg{flex:0 0 auto;min-height:62px;display:flex;align-items:center;justify-content:center;
+    text-align:center;padding:10px 16px;font-size:clamp(13px,3.9vw,16px);line-height:1.6;
+    background:rgba(0,0,0,.5);border-top:1px solid rgba(180,160,220,.18);color:#f3eeff;}
+  #msg b{color:#ffe27a;}
+
+  /* inventory */
+  #inv{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 12px max(env(safe-area-inset-bottom),10px);
+    background:rgba(0,0,0,.4);min-height:56px;overflow-x:auto;}
+  #inv .lbl{font-size:11px;color:#9b8fc0;letter-spacing:1px;flex:0 0 auto;}
+  .item{flex:0 0 auto;width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+    font-size:24px;background:rgba(255,255,255,.08);border:1px solid rgba(180,160,220,.3);cursor:pointer;
+    position:relative;}
+  .item.sel{border-color:#ffe27a;box-shadow:0 0 12px rgba(255,226,122,.6);}
+  .item.used{opacity:.4;}
+
+  /* modal */
+  .modal{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;
+    background:rgba(5,3,12,.82);padding:18px;}
+  .modal.show{display:flex;}
+  .panel{background:#1d182e;border:1px solid rgba(180,160,220,.35);border-radius:16px;
+    padding:20px;max-width:340px;width:100%;text-align:center;box-shadow:0 14px 40px rgba(0,0,0,.6);}
+  .panel h3{font-size:18px;margin-bottom:14px;letter-spacing:2px;color:#d9c7ff;}
+  .kdisp{font-size:38px;font-weight:900;letter-spacing:10px;font-variant-numeric:tabular-nums;
+    background:#0d0a18;border:2px solid rgba(180,160,220,.4);border-radius:10px;padding:10px;margin-bottom:14px;
+    min-height:62px;color:#ffe27a;}
+  .kdisp.bad{animation:shake .4s;border-color:#e0506e;color:#ff8da0;}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+  .keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .key{padding:15px 0;font-size:22px;font-weight:800;border-radius:10px;border:1px solid rgba(180,160,220,.3);
+    background:rgba(255,255,255,.07);color:#fff;cursor:pointer;font-family:inherit;}
+  .key:active{background:rgba(255,255,255,.2);}
+  .key.wide{grid-column:span 1;font-size:15px;}
+  .panel .close{margin-top:14px;font-size:13px;color:#9b8fc0;cursor:pointer;text-decoration:underline;}
+  #notesList{text-align:left;font-size:14px;line-height:2;color:#e6dffb;}
+  #notesList .none{color:#9b8fc0;text-align:center;}
+  #notesList li{list-style:none;padding:6px 10px;border-bottom:1px dashed rgba(180,160,220,.2);}
+  #notesList li b{color:#ffe27a;}
+
+  /* overlays */
+  .overlay{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;text-align:center;padding:28px;background:radial-gradient(circle at 50% 40%,rgba(40,25,70,.7),rgba(8,5,16,.95));}
+  .overlay.hidden{display:none;}
+  .big{font-size:clamp(30px,9vw,56px);font-weight:900;letter-spacing:4px;color:#d9c7ff;
+    text-shadow:0 0 24px rgba(160,120,255,.6);line-height:1.2;}
+  .win .big{color:#9effc0;text-shadow:0 0 24px rgba(80,255,150,.6);}
+  .sub{margin-top:18px;font-size:clamp(14px,4vw,17px);line-height:1.9;color:#cbbfe6;max-width:520px;}
+  .sub b{color:#ffe27a;}
+  .stat{font-size:clamp(16px,5vw,22px);margin-top:10px;}
+  .stat b{color:#ffe27a;font-size:1.4em;}
+  .newrec{color:#9effc0;font-weight:900;margin-top:8px;animation:pop .5s ease;}
+  @keyframes pop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.18)}100%{transform:scale(1)}}
+  .btn{margin-top:24px;cursor:pointer;border:none;font-family:inherit;font-size:clamp(18px,5.5vw,24px);
+    font-weight:900;letter-spacing:2px;color:#1a0f2e;background:linear-gradient(180deg,#c9a8ff,#9b6bff);
+    border-radius:12px;padding:15px 40px;box-shadow:0 7px 0 #5e3aa6,0 0 22px rgba(155,107,255,.5);}
+  .btn:active{transform:translateY(4px);box-shadow:0 3px 0 #5e3aa6;}
+  .lnk{margin-top:16px;display:inline-block;color:#ffe27a;font-size:14px;font-weight:700;text-decoration:none;text-shadow:0 0 10px #b58900;}
+  .hint{margin-top:14px;font-size:12px;color:#9b8fc0;}
+  #backLink{position:absolute;left:10px;bottom:8px;font-size:11px;color:#9b8fc0;text-decoration:none;z-index:6;}
+  #muteBtn{border:none;background:rgba(255,255,255,.06);color:#fff;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:15px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="bar">
+    <span class="ttl">🔐 密室からの脱出</span>
+    <button id="notesBtn" class="topbtn">📝 メモ</button>
+    <button id="muteBtn">🔊</button>
+    <span class="timer" id="timer">00:00</span>
+  </div>
+
+  <div id="room">
+    <!-- hotspots positioned by JS-friendly inline styles -->
+    <div class="hot" id="h-painting" style="left:38%;top:26%"><div class="ic">🖼️</div><div class="lb">絵</div></div>
+    <div class="hot" id="h-clock"    style="left:68%;top:20%"><div class="ic">🕗</div><div class="lb">時計</div></div>
+    <div class="hot" id="h-shelf"    style="left:13%;top:34%"><div class="ic">📚</div><div class="lb">本棚</div></div>
+    <div class="hot" id="h-door"     style="left:88%;top:55%"><div class="ic">🚪</div><div class="lb">ドア</div></div>
+    <div class="hot" id="h-drawer"   style="left:46%;top:74%"><div class="ic">🗄️</div><div class="lb">引き出し</div></div>
+    <div class="hot" id="h-plant"    style="left:13%;top:78%"><div class="ic">🪴</div><div class="lb">鉢植え</div></div>
+    <div class="hot" id="h-trash"    style="left:74%;top:80%"><div class="ic">🗑️</div><div class="lb">ゴミ箱</div></div>
+  </div>
+
+  <div id="msg">ここはどこだ…？ 見回して<b>脱出</b>の手がかりを探そう。<br>気になる物をタップ！</div>
+
+  <div id="inv"><span class="lbl">持ち物</span></div>
+
+  <a id="backLink" href="./index.html">← ハブに戻る</a>
+</div>
+
+<!-- keypad modal -->
+<div class="modal" id="keypad">
+  <div class="panel">
+    <h3>🚪 ドアの暗証番号（4桁）</h3>
+    <div class="kdisp" id="kdisp"></div>
+    <div class="keys">
+      <button class="key">1</button><button class="key">2</button><button class="key">3</button>
+      <button class="key">4</button><button class="key">5</button><button class="key">6</button>
+      <button class="key">7</button><button class="key">8</button><button class="key">9</button>
+      <button class="key wide" id="kClear">クリア</button><button class="key">0</button>
+      <button class="key wide" id="kEnter" style="background:rgba(155,107,255,.4)">決定</button>
+    </div>
+    <div class="close" id="kClose">閉じる</div>
+  </div>
+</div>
+
+<!-- notes modal -->
+<div class="modal" id="notes">
+  <div class="panel">
+    <h3>📝 手がかりメモ</h3>
+    <ul id="notesList"></ul>
+    <div class="close" id="nClose">閉じる</div>
+  </div>
+</div>
+
+<!-- start -->
+<div class="overlay" id="startScreen">
+  <div class="big">密室からの<br>脱出</div>
+  <div class="sub">目を覚ますと、見知らぬ部屋に閉じ込められていた。<br>
+    部屋を調べ、<b>謎を解いて暗証番号</b>を導き、ドアを開けて脱出せよ。<br>
+    （手がかりは「📝メモ」に自動で記録されます）</div>
+  <button class="btn" id="startBtn">▶ はじめる</button>
+  <a class="lnk" href="./index.html">← ハブに戻る</a>
+  <div class="hint">クリアタイムがランキングに登録されます（速いほど上位）</div>
+</div>
+
+<!-- win -->
+<div class="overlay win hidden" id="winScreen">
+  <div class="big">🔓 脱出成功！</div>
+  <div class="newrec hidden" id="winRec">★ 最速記録更新 ★</div>
+  <div class="stat">クリアタイム <b id="winTime">00:00</b></div>
+  <div class="sub" id="winSub">よくぞ謎を解いた…！</div>
+  <button class="btn" id="retryBtn">🔁 もう一度</button>
+  <a class="lnk" href="./index.html">← ハブに戻る（ランキングを見る）</a>
+</div>
+
+<script src="./rank.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var msgEl=$('msg'), invEl=$('inv'), timerEl=$('timer');
+  var keypad=$('keypad'), kdisp=$('kdisp'), notes=$('notes'), notesList=$('notesList');
+  var startScreen=$('startScreen'), winScreen=$('winScreen');
+
+  // ---- audio ----
+  var actx=null, muted=false;
+  function ensureAudio(){ if(!actx){ try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){actx=null;} } if(actx&&actx.state==='suspended')actx.resume(); }
+  function tone(f,d,t,v,sl){ if(muted||!actx)return; var o=actx.createOscillator(),g=actx.createGain();
+    o.type=t||'sine';o.frequency.value=f; if(sl)o.frequency.exponentialRampToValueAtTime(sl,actx.currentTime+d);
+    g.gain.value=v||0.06;o.connect(g);g.connect(actx.destination); var n=actx.currentTime;
+    g.gain.setValueAtTime(g.gain.value,n);g.gain.exponentialRampToValueAtTime(0.0001,n+d);o.start(n);o.stop(n+d); }
+  var sfx={
+    tap:function(){tone(420,0.05,'sine',0.04,520);},
+    get:function(){tone(660,0.12,'triangle',0.08,990);setTimeout(function(){tone(1180,0.16,'triangle',0.07);},90);},
+    bad:function(){tone(200,0.2,'sawtooth',0.09,120);},
+    ok:function(){tone(720,0.1,'square',0.06,960);},
+    win:function(){[523,659,784,1046].forEach(function(f,i){setTimeout(function(){tone(f,0.4,'triangle',0.09);},i*150);});}
+  };
+  $('muteBtn').addEventListener('click',function(){ muted=!muted; $('muteBtn').textContent=muted?'🔇':'🔊'; });
+
+  // ---- state ----
+  var started=false, won=false, hasKey=false, drawerOpen=false, t0=0, timerId=null;
+  var code='', dig={clock:0,books:0,painting:0,drawer:0};
+  var clues={};                 // discovered clue text by key
+  var visited={};               // hotspots already meaningfully examined
+
+  function rnd(a,b){ return a+Math.floor(Math.random()*(b-a+1)); }
+
+  function newGame(){
+    started=true; won=false; hasKey=false; drawerOpen=false;
+    clues={}; visited={};
+    dig.clock=rnd(1,9); dig.books=rnd(2,7); dig.painting=rnd(0,9); dig.drawer=rnd(0,9);
+    code=''+dig.clock+dig.books+dig.painting+dig.drawer;  // 順: 時計→本棚→絵→引き出し
+    invEl.querySelectorAll('.item').forEach(function(n){n.remove();});
+    document.querySelectorAll('.hot').forEach(function(h){h.classList.remove('solved','glint');});
+    renderNotes();
+    say('ここはどこだ…？ 部屋の物をタップして調べよう。');
+    t0=Date.now(); won=false;
+    if(timerId)clearInterval(timerId);
+    timerId=setInterval(tick,250);
+  }
+  function tick(){
+    if(won) return;
+    var s=Math.floor((Date.now()-t0)/1000);
+    timerEl.textContent=('0'+Math.floor(s/60)).slice(-2)+':'+('0'+(s%60)).slice(-2);
+  }
+
+  function say(html){ msgEl.innerHTML=html; }
+
+  function addItem(emoji,name){
+    var d=document.createElement('div'); d.className='item'; d.textContent=emoji; d.title=name; d.dataset.name=name;
+    invEl.appendChild(d); return d;
+  }
+  function hasItem(name){ return !!invEl.querySelector('.item[data-name="'+name+'"]'); }
+
+  function addClue(key,text){ if(!clues[key]){ clues[key]=text; renderNotes(); } }
+  function renderNotes(){
+    var ks=Object.keys(clues);
+    if(!ks.length){ notesList.innerHTML='<li class="none">まだ手がかりがありません。<br>部屋を調べよう。</li>'; return; }
+    notesList.innerHTML=ks.map(function(k){return '<li>'+clues[k]+'</li>';}).join('');
+  }
+  function markSolved(id){ var h=$(id); if(h)h.classList.add('solved'); }
+
+  // ---- hotspot interactions ----
+  function bind(id,fn){ $(id).addEventListener('click',function(){ if(!started||won)return; ensureAudio(); sfx.tap(); fn(); }); }
+
+  bind('h-shelf',function(){
+    var b=''; for(var i=0;i<dig.books;i++)b+='📕';
+    say('本棚には本が並んでいる。<br>'+b+'<br><b>'+dig.books+'冊</b>ある。');
+    addClue('books','本棚: <b>'+dig.books+'</b> 冊');
+    markSolved('h-shelf');
+  });
+
+  bind('h-clock',function(){
+    say('壁の時計は止まっている。針は <b>'+dig.clock+'時</b> を指している。🕗');
+    addClue('clock','時計: <b>'+dig.clock+'</b>');
+    markSolved('h-clock');
+  });
+
+  bind('h-painting',function(){
+    say('額縁の絵をずらすと…壁に数字の落書きがあった！<br>「<b>'+dig.painting+'</b>」🖼️');
+    addClue('painting','絵の裏の壁: <b>'+dig.painting+'</b>');
+    markSolved('h-painting');
+  });
+
+  bind('h-plant',function(){
+    if(!hasKey){ hasKey=true; addItem('🔑','鍵'); sfx.get();
+      say('鉢植えの土を掘ると…<b>小さな鍵</b>を見つけた！🔑<br>持ち物に追加した。');
+      markSolved('h-plant');
+    } else { say('鉢植えの土には、もう何もないようだ。🪴'); }
+  });
+
+  bind('h-trash',function(){
+    say('ゴミ箱に丸めた紙が。広げると——<br>「暗証番号は <b>時計 → 本棚 → 絵 → 引き出し</b> の順」📝');
+    addClue('order','暗証番号の順: <b>時計→本棚→絵→引き出し</b>');
+    markSolved('h-trash');
+  });
+
+  bind('h-drawer',function(){
+    if(drawerOpen){ say('引き出しの底には <b>'+dig.drawer+'</b> が刻まれている。'); return; }
+    if(hasItem('鍵')){
+      drawerOpen=true; sfx.ok();
+      var key=invEl.querySelector('.item[data-name="鍵"]'); if(key)key.classList.add('used');
+      say('🔑 鍵を使って引き出しを開けた！<br>底に数字が刻印されている：「<b>'+dig.drawer+'</b>」');
+      addClue('drawer','引き出しの底: <b>'+dig.drawer+'</b>');
+      markSolved('h-drawer');
+    } else {
+      say('引き出しには <b>鍵</b> がかかっている。どこかに鍵がないか？🔒');
+    }
+  });
+
+  bind('h-door',function(){ openKeypad(); });
+
+  // ---- keypad ----
+  var entry='';
+  function openKeypad(){ entry=''; updKdisp(); keypad.classList.add('show'); }
+  function updKdisp(){ kdisp.textContent = entry.padEnd(4,'•'); }
+  keypad.querySelectorAll('.key').forEach(function(k){
+    if(k.id) return;
+    k.addEventListener('click',function(){ if(entry.length<4){ ensureAudio(); sfx.tap(); entry+=k.textContent.trim(); updKdisp(); } });
+  });
+  $('kClear').addEventListener('click',function(){ entry=''; updKdisp(); });
+  $('kClose').addEventListener('click',function(){ keypad.classList.remove('show'); });
+  $('kEnter').addEventListener('click',function(){
+    if(entry.length<4){ return; }
+    ensureAudio();
+    if(entry===code){ keypad.classList.remove('show'); doWin(); }
+    else { sfx.bad(); kdisp.classList.add('bad'); setTimeout(function(){kdisp.classList.remove('bad');entry='';updKdisp();},450); }
+  });
+
+  // ---- notes modal ----
+  $('notesBtn').addEventListener('click',function(){ renderNotes(); notes.classList.add('show'); });
+  $('nClose').addEventListener('click',function(){ notes.classList.remove('show'); });
+
+  // ---- win ----
+  function doWin(){
+    won=true; if(timerId)clearInterval(timerId);
+    sfx.win();
+    var s=Math.floor((Date.now()-t0)/1000);
+    var mmss=('0'+Math.floor(s/60)).slice(-2)+':'+('0'+(s%60)).slice(-2);
+    $('winTime').textContent=mmss;
+    $('winSub').innerHTML='暗証番号 <b>'+code+'</b> を解き明かし、ドアは開いた。<br>おめでとう、脱出成功だ！';
+    // ranking (asc: 速いほど上位) — 秒で送信
+    if(window.Rank){
+      var prevBest = (window.Rank.top('escape',1)[0]||{}).s;
+      window.Rank.submitScore('escape', s);
+      if(prevBest===undefined || s<prevBest) $('winRec').classList.remove('hidden'); else $('winRec').classList.add('hidden');
+    }
+    winScreen.classList.remove('hidden');
+  }
+
+  // ---- buttons ----
+  $('startBtn').addEventListener('click',function(){ ensureAudio(); startScreen.classList.add('hidden'); winScreen.classList.add('hidden'); newGame(); });
+  $('retryBtn').addEventListener('click',function(){ ensureAudio(); winScreen.classList.add('hidden'); newGame(); });
+})();
+</script>
+</body>
+</html>

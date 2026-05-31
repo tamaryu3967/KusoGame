@@ -57,6 +57,8 @@
   .c-neon h3{color:var(--cyan);} .c-neon .play{background:var(--cyan);color:#04101f;}
   .c-horror .cover{background:radial-gradient(circle,#1c0f0f,#080404);}
   .c-horror h3{color:#d9b27a;} .c-horror .play{background:#c9a05a;color:#1a0d0d;}
+  .c-escape .cover{background:radial-gradient(circle,#241a3a,#120c1f);}
+  .c-escape h3{color:#c9a8ff;} .c-escape .play{background:#c9a8ff;color:#1a0f2e;}
   .card:hover{box-shadow:0 0 26px rgba(0,234,255,.18);}
   .badge{position:absolute;top:10px;right:10px;font-size:10px;letter-spacing:1px;
     background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:3px 7px;}
@@ -131,6 +133,15 @@
         <div class="foot"><span class="best" id="best-horror">BEST —</span><span class="play">▶ PLAY</span></div>
       </div>
     </a>
+    <a class="card c-escape" href="./escape.html">
+      <div class="cover">🔐🔍<span class="badge">PUZZLE</span></div>
+      <div class="body">
+        <h3>密室からの脱出</h3>
+        <div class="genre">ESCAPE / 謎解き</div>
+        <div class="desc">部屋を調べ、謎を解いて暗証番号を導け。毎回コードが変わる本格脱出。最速クリアを狙え。</div>
+        <div class="foot"><span class="best" id="best-escape">BEST —</span><span class="play">▶ PLAY</span></div>
+      </div>
+    </a>
   </div>
 
   <div class="rank-sec">
@@ -139,6 +150,7 @@
       <button class="tab active" data-game="runner">💩 中年ダッシュ</button>
       <button class="tab" data-game="neon">🎮 NEON</button>
       <button class="tab" data-game="horror">🕯️ 祓</button>
+      <button class="tab" data-game="escape">🔐 脱出</button>
     </div>
     <div class="board" id="board"></div>
     <div class="metric-note" id="metricNote"></div>
@@ -170,7 +182,7 @@
   nameInput.addEventListener('blur', saveName);
 
   // best on cards
-  ['runner','neon','horror'].forEach(function(g){
+  ['runner','neon','horror','escape'].forEach(function(g){
     var t = R.top(g,1); var c = R.CFG[g];
     var el = document.getElementById('best-'+g);
     el.textContent = t.length ? ('BEST '+t[0].s+c.unit) : 'BEST —';
