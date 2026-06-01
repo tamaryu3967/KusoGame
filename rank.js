@@ -12,7 +12,8 @@ window.Rank = (function () {
     neon:   { asc: false, unit: 'pt', emoji: '🎮', title: 'NEON BLASTER',            metric: 'スコア' },
     horror: { asc: true,  unit: '秒', emoji: '🕯️', title: '祓 — 八つのお札',          metric: 'クリア最速' },
     escape: { asc: true,  unit: '秒', emoji: '🔐', title: '密室からの脱出',           metric: 'クリア最速' },
-    rush:   { asc: true,  unit: '秒', emoji: '🏁', title: 'RUSH タイムアタック',       metric: 'クリア最速', fmt: function(v){ return (v/100).toFixed(2); } }
+    rush:   { asc: true,  unit: '秒', emoji: '🏁', title: 'RUSH タイムアタック',       metric: 'クリア最速', fmt: function(v){ return (v/100).toFixed(2); } },
+    p2048:  { asc: false, unit: 'pt', emoji: '🔢', title: '2048 マージパズル',          metric: 'スコア' }
   };
   // 表示整形（rushは1/100秒で保存→秒表示）
   function format(game, v){ var c = CFG[game]; if(!c) return '' + v; return (c.fmt ? c.fmt(v) : v) + c.unit; }

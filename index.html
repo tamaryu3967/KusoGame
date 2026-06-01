@@ -61,6 +61,8 @@
   .c-escape h3{color:#c9a8ff;} .c-escape .play{background:#c9a8ff;color:#1a0f2e;}
   .c-rush .cover{background:radial-gradient(circle,#0c2a3a,#06141f);}
   .c-rush h3{color:#9be7ff;} .c-rush .play{background:#9be7ff;color:#06141f;}
+  .c-p2048 .cover{background:radial-gradient(circle,#3a2e12,#1c1608);}
+  .c-p2048 h3{color:#f3d67a;} .c-p2048 .play{background:#f3d67a;color:#1c1608;}
   .card:hover{box-shadow:0 0 26px rgba(0,234,255,.18);}
   .badge{position:absolute;top:10px;right:10px;font-size:10px;letter-spacing:1px;
     background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:3px 7px;}
@@ -153,6 +155,15 @@
         <div class="foot"><span class="best" id="best-rush">BEST —</span><span class="play">▶ PLAY</span></div>
       </div>
     </a>
+    <a class="card c-p2048" href="./p2048.html">
+      <div class="cover">🔢✨<span class="badge">PUZZLE</span></div>
+      <div class="body">
+        <h3>2048</h3>
+        <div class="genre">MERGE / 無限パズル</div>
+        <div class="desc">同じ数字を寄せて合体。2048を超えても無限に続く定番パズル。ハイスコアを狙え。</div>
+        <div class="foot"><span class="best" id="best-p2048">BEST —</span><span class="play">▶ PLAY</span></div>
+      </div>
+    </a>
   </div>
 
   <div class="rank-sec">
@@ -163,6 +174,7 @@
       <button class="tab" data-game="horror">🕯️ 祓</button>
       <button class="tab" data-game="escape">🔐 脱出</button>
       <button class="tab" data-game="rush">🏁 RUSH</button>
+      <button class="tab" data-game="p2048">🔢 2048</button>
     </div>
     <div class="board" id="board"></div>
     <div class="metric-note" id="metricNote"></div>
@@ -194,7 +206,7 @@
   nameInput.addEventListener('blur', saveName);
 
   // best on cards
-  ['runner','neon','horror','escape','rush'].forEach(function(g){
+  ['runner','neon','horror','escape','rush','p2048'].forEach(function(g){
     var t = R.top(g,1);
     var el = document.getElementById('best-'+g);
     el.textContent = t.length ? ('BEST '+R.format(g, t[0].s)) : 'BEST —';
