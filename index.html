@@ -59,6 +59,8 @@
   .c-horror h3{color:#d9b27a;} .c-horror .play{background:#c9a05a;color:#1a0d0d;}
   .c-escape .cover{background:radial-gradient(circle,#241a3a,#120c1f);}
   .c-escape h3{color:#c9a8ff;} .c-escape .play{background:#c9a8ff;color:#1a0f2e;}
+  .c-rush .cover{background:radial-gradient(circle,#0c2a3a,#06141f);}
+  .c-rush h3{color:#9be7ff;} .c-rush .play{background:#9be7ff;color:#06141f;}
   .card:hover{box-shadow:0 0 26px rgba(0,234,255,.18);}
   .badge{position:absolute;top:10px;right:10px;font-size:10px;letter-spacing:1px;
     background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:3px 7px;}
@@ -142,6 +144,15 @@
         <div class="foot"><span class="best" id="best-escape">BEST —</span><span class="play">▶ PLAY</span></div>
       </div>
     </a>
+    <a class="card c-rush" href="./rush.html">
+      <div class="cover">🏁⚡<span class="badge">TIME</span></div>
+      <div class="body">
+        <h3>RUSH</h3>
+        <div class="genre">TIME ATTACK / 疾走</div>
+        <div class="desc">コースを駆け抜け最速ゴール。死んでも即復活、時計は止まらない。0.01秒を削れ。</div>
+        <div class="foot"><span class="best" id="best-rush">BEST —</span><span class="play">▶ PLAY</span></div>
+      </div>
+    </a>
   </div>
 
   <div class="rank-sec">
@@ -151,6 +162,7 @@
       <button class="tab" data-game="neon">🎮 NEON</button>
       <button class="tab" data-game="horror">🕯️ 祓</button>
       <button class="tab" data-game="escape">🔐 脱出</button>
+      <button class="tab" data-game="rush">🏁 RUSH</button>
     </div>
     <div class="board" id="board"></div>
     <div class="metric-note" id="metricNote"></div>
@@ -182,10 +194,10 @@
   nameInput.addEventListener('blur', saveName);
 
   // best on cards
-  ['runner','neon','horror','escape'].forEach(function(g){
-    var t = R.top(g,1); var c = R.CFG[g];
+  ['runner','neon','horror','escape','rush'].forEach(function(g){
+    var t = R.top(g,1);
     var el = document.getElementById('best-'+g);
-    el.textContent = t.length ? ('BEST '+t[0].s+c.unit) : 'BEST —';
+    el.textContent = t.length ? ('BEST '+R.format(g, t[0].s)) : 'BEST —';
   });
 
   function fmtDate(ts){ var d=new Date(ts); return (d.getMonth()+1)+'/'+d.getDate(); }
@@ -207,7 +219,7 @@
         html += '<div class="'+cls+'">'
           + '<div class="pos">'+(i===0?'👑':(i+1))+'</div>'
           + '<div class="nm">'+escapeHtml(e.n)+' <span style="opacity:.45;font-size:11px">'+fmtDate(e.t)+'</span></div>'
-          + '<div class="sc">'+e.s+'<span style="font-size:11px;color:#9fb0c8;font-weight:400"> '+c.unit+'</span></div>'
+          + '<div class="sc">'+R.format(game, e.s)+'</div>'
           + '</div>';
       });
       board.innerHTML = html;
@@ -227,7 +239,7 @@
   clearBtn.addEventListener('click', function(){
     if(confirm(R.CFG[current].title+' の「この端末内」の記録を消去します。\n（オンライン全体ランキングからは消えません）')){
       R.clear(current); renderBoard(current);
-      var t=R.top(current,1); document.getElementById('best-'+current).textContent = t.length?('BEST '+t[0].s+R.CFG[current].unit):'BEST —';
+      var t=R.top(current,1); document.getElementById('best-'+current).textContent = t.length?('BEST '+R.format(current,t[0].s)):'BEST —';
     }
   });
 

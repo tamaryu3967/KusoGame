@@ -15,7 +15,7 @@
 
 var SHEET_NAME = 'scores';
 // ゲームごとの並び方向（desc=大きいほど上位 / asc=小さいほど上位）
-var GAMES = { runner: 'desc', neon: 'desc', horror: 'asc', escape: 'asc' };
+var GAMES = { runner: 'desc', neon: 'desc', horror: 'asc', escape: 'asc', rush: 'asc' };
 
 function getSheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();

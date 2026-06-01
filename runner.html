@@ -96,6 +96,35 @@
   }
   .credit { position:absolute; bottom: 10px; font-size: 11px; opacity:.5; color:#fff; }
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Shippori+Mincho:wght@600;800&display=swap" rel="stylesheet">
+<style id="lux">
+  /* vignette + film grain over the canvas */
+  #wrap::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:4;
+    box-shadow:inset 0 0 220px 50px rgba(0,0,0,.55);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+    background-blend-mode:overlay;opacity:1;}
+  #wrap::after{mix-blend-mode:normal;}
+  /* overlays: glassy + gold + mincho */
+  .overlay{background:radial-gradient(circle at 50% 38%,rgba(40,20,55,.78),rgba(8,5,16,.95))!important;
+    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);}
+  .title{font-family:"Shippori Mincho","Yu Mincho",serif!important;
+    background:linear-gradient(180deg,#f7eccf,#e0a24a 55%,#b06a2c);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    text-shadow:none!important;filter:drop-shadow(0 3px 10px rgba(224,162,74,.4));}
+  .sub,.score-line,.hint,.credit{font-family:"Shippori Mincho","Yu Mincho",serif!important;}
+  .sub{color:#d8cdb5!important;}
+  .gameover-msg{font-family:"Shippori Mincho","Yu Mincho",serif!important;color:#e9b86b!important;
+    text-shadow:0 0 18px rgba(180,90,40,.5)!important;}
+  .score-line b{color:#ffd98a!important;}
+  .newrec{color:#8fe6b4!important;}
+  .btn{font-family:"Shippori Mincho","Yu Mincho",serif!important;letter-spacing:3px;
+    background:linear-gradient(180deg,#e7cf94,#c19a52)!important;color:#1c1409!important;
+    box-shadow:0 7px 0 #7c5e2c,0 12px 26px rgba(0,0,0,.5)!important;border:1px solid rgba(255,240,200,.5)!important;}
+  .btn:active{box-shadow:0 3px 0 #7c5e2c!important;}
+  .mute{background:rgba(0,0,0,.35)!important;border:1px solid rgba(216,183,119,.4)!important;}
+</style>
 </head>
 <body>
 <div id="wrap">
@@ -208,7 +237,7 @@
   const STATE = { START: 0, PLAY: 1, OVER: 2 };
   let state = STATE.START;
 
-  let player, obstacles, items, particles, clouds, buildings;
+  let player, obstacles, items, particles, clouds, buildings, stars;
   let speed, baseSpeed, distance, oniCount, spawnTimer, itemTimer, shake, runFrame;
   let best = +(localStorage.getItem("kuso_best") || 0);
 
@@ -232,6 +261,7 @@
     particles = [];
     clouds = [];
     buildings = [];
+    stars = [];
     baseSpeed = Math.max(360, W * 0.55);
     speed = baseSpeed;
     distance = 0;
@@ -241,16 +271,21 @@
     shake = 0;
     runFrame = 0;
 
-    // parallax clouds
-    for (let i = 0; i < 5; i++) {
+    // stars
+    for (let i = 0; i < 60; i++) {
+      stars.push({ x: Math.random()*W, y: Math.random()*H*0.55, r: Math.random()*1.4+0.4, p: Math.random()*6.28 });
+    }
+    // parallax clouds (thin night haze)
+    for (let i = 0; i < 4; i++) {
       clouds.push({ x: Math.random()*W, y: H*0.1 + Math.random()*H*0.3, s: 0.4+Math.random()*0.6, scale: 0.7+Math.random()*0.9 });
     }
-    // parallax buildings
+    // parallax buildings — dark night silhouettes
+    const bpal = ["#2a2350","#241d44","#2e2742","#1f2740","#332a55"];
     let bx = 0;
     while (bx < W + 200) {
       const bw = 50 + Math.random()*70;
-      const bh = H*0.12 + Math.random()*H*0.22;
-      buildings.push({ x: bx, w: bw, h: bh, c: ["#6c5ce7","#a29bfe","#74b9ff","#81ecec"][Math.floor(Math.random()*4)] });
+      const bh = H*0.14 + Math.random()*H*0.26;
+      buildings.push({ x: bx, w: bw, h: bh, c: bpal[Math.floor(Math.random()*bpal.length)], seed: Math.floor(Math.random()*1000) });
       bx += bw + 10;
     }
   }
@@ -410,7 +445,8 @@
       if (b.x + b.w < -20) {
         b.x = rightMost + 10;
         b.w = 50 + Math.random()*70;
-        b.h = H*0.12 + Math.random()*H*0.22;
+        b.h = H*0.14 + Math.random()*H*0.26;
+        b.seed = Math.floor(Math.random()*1000);
         rightMost = b.x + b.w;
       }
     }
@@ -496,50 +532,77 @@
       ctx.translate(sx, sy);
     }
 
-    // sky gradient
+    // sky gradient (luxury dusk → night)
     const sky = ctx.createLinearGradient(0,0,0,H);
-    sky.addColorStop(0, "#5eb3e4");
-    sky.addColorStop(0.7, "#afe0f5");
-    sky.addColorStop(1, "#e8f7ff");
+    sky.addColorStop(0,   "#160e2e");
+    sky.addColorStop(0.45,"#3a1f5c");
+    sky.addColorStop(0.72,"#8a3b6b");
+    sky.addColorStop(1,   "#e8835a");
     ctx.fillStyle = sky;
     ctx.fillRect(-40,-40,W+80,H+80);
 
-    // sun
-    ctx.fillStyle = "rgba(255,241,118,0.9)";
-    ctx.beginPath(); ctx.arc(W*0.82, H*0.18, Math.min(W,H)*0.07, 0, Math.PI*2); ctx.fill();
+    // stars (twinkle), fading toward horizon
+    const tnow = performance.now() * 0.002;
+    for (const s of stars) {
+      const tw = 0.55 + 0.45 * Math.sin(tnow + s.p);
+      const fade = Math.max(0, 1 - s.y / (H*0.6));
+      ctx.fillStyle = "rgba(255,248,224," + (tw * fade * 0.9).toFixed(3) + ")";
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+    }
 
-    // clouds
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    // moon with soft halo
+    const mx = W*0.80, my = H*0.16, mr = Math.min(W,H)*0.07;
+    const halo = ctx.createRadialGradient(mx,my,mr*0.4, mx,my,mr*2.6);
+    halo.addColorStop(0,"rgba(255,238,200,0.45)"); halo.addColorStop(1,"rgba(255,238,200,0)");
+    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(mx,my,mr*2.6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#fdf2cf"; ctx.beginPath(); ctx.arc(mx,my,mr,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = "rgba(0,0,0,0.06)"; ctx.beginPath(); ctx.arc(mx+mr*0.35,my-mr*0.2,mr*0.18,0,Math.PI*2); ctx.fill();
+
+    // clouds (faint night haze)
+    ctx.fillStyle = "rgba(120,90,140,0.18)";
     for (const c of clouds) {
       drawCloud(c.x, c.y, 26*c.scale);
     }
 
-    // buildings (parallax)
+    // buildings (parallax silhouettes with glowing windows)
     for (const b of buildings) {
       ctx.fillStyle = b.c;
-      ctx.globalAlpha = 0.75;
+      ctx.globalAlpha = 0.92;
       ctx.fillRect(b.x, groundY - b.h, b.w, b.h);
-      // windows
-      ctx.fillStyle = "rgba(255,255,255,0.5)";
-      for (let wy = groundY - b.h + 10; wy < groundY - 12; wy += 22) {
-        for (let wx = b.x + 8; wx < b.x + b.w - 10; wx += 18) {
-          ctx.fillRect(wx, wy, 8, 11);
-        }
-      }
       ctx.globalAlpha = 1;
+      // windows: deterministic per building (col/row + seed) so no flicker
+      let col = 0;
+      for (let wx = b.x + 8; wx < b.x + b.w - 10; wx += 16) {
+        let row = 0;
+        for (let wy = groundY - b.h + 12; wy < groundY - 14; wy += 20) {
+          const h = (b.seed + col*7 + row*13) % 7;
+          if (h === 0) ctx.fillStyle = "rgba(40,40,70,0.6)";          // dark window
+          else if (h < 3) ctx.fillStyle = "rgba(255,206,120,0.85)";   // warm lit
+          else ctx.fillStyle = "rgba(255,228,170,0.35)";              // dim lit
+          ctx.fillRect(wx, wy, 7, 10);
+          row++;
+        }
+        col++;
+      }
     }
 
-    // ground
-    ctx.fillStyle = "#5a4633";
+    // ground (asphalt with sheen near horizon)
+    const grd = ctx.createLinearGradient(0, groundY, 0, H);
+    grd.addColorStop(0, "#241c2e");
+    grd.addColorStop(1, "#0e0a16");
+    ctx.fillStyle = grd;
     ctx.fillRect(0, groundY, W, H - groundY);
-    ctx.fillStyle = "#6b5640";
-    ctx.fillRect(0, groundY, W, 8);
-    // road dashes
-    ctx.fillStyle = "rgba(255,235,150,0.7)";
-    const dashW = 38, gap = 34;
+    // glowing curb line
+    ctx.fillStyle = "rgba(255,200,120,0.55)";
+    ctx.fillRect(0, groundY, W, 3);
+    ctx.fillStyle = "rgba(255,150,90,0.12)";
+    ctx.fillRect(0, groundY+3, W, 10);
+    // center dashes (gold)
+    ctx.fillStyle = "rgba(255,214,140,0.8)";
+    const dashW = 40, gap = 34;
     const offset = (distance * 6) % (dashW + gap);
     for (let x = -offset; x < W; x += dashW + gap) {
-      ctx.fillRect(x, groundY + (H-groundY)*0.45, dashW, 6);
+      ctx.fillRect(x, groundY + (H-groundY)*0.48, dashW, 5);
     }
 
     // items (onigiri)
@@ -566,20 +629,24 @@
 
     ctx.restore();
 
-    // HUD
+    // HUD (premium gold on dark)
     if (state === STATE.PLAY || state === STATE.OVER) {
-      ctx.fillStyle = "#1a1a2e";
-      ctx.font = "900 " + Math.round(Math.min(W,H)*0.06) + "px sans-serif";
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
-      const pad = 14 + (window.innerWidth > 0 ? 0 : 0);
+      ctx.shadowColor = "rgba(0,0,0,0.7)";
+      ctx.shadowBlur = 8; ctx.shadowOffsetY = 2;
+      const serif = '"Shippori Mincho","Yu Mincho",serif';
+      ctx.font = "800 " + Math.round(Math.min(W,H)*0.062) + "px " + serif;
+      ctx.fillStyle = "#f3e3b6";
       ctx.fillText(Math.floor(distance) + " m", 16, 14);
-      ctx.font = "900 " + Math.round(Math.min(W,H)*0.045) + "px sans-serif";
-      ctx.fillText("🍙 " + oniCount, 16, 14 + Math.min(W,H)*0.07);
-      // best
+      ctx.font = "700 " + Math.round(Math.min(W,H)*0.045) + "px " + serif;
+      ctx.fillStyle = "#ffd98a";
+      ctx.fillText("🍙 " + oniCount, 16, 16 + Math.min(W,H)*0.07);
       ctx.textAlign = "right";
-      ctx.fillStyle = "rgba(26,26,46,0.65)";
-      ctx.fillText("最高 " + best + "m", W - 64, 18);
+      ctx.fillStyle = "rgba(220,205,170,0.8)";
+      ctx.font = "700 " + Math.round(Math.min(W,H)*0.04) + "px " + serif;
+      ctx.fillText("最高 " + best + "m", W - 16, 18);
+      ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     }
   }
 

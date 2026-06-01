@@ -11,8 +11,11 @@ window.Rank = (function () {
     runner: { asc: false, unit: 'm',  emoji: '💩', title: 'うんち回避！中年ダッシュ', metric: '距離' },
     neon:   { asc: false, unit: 'pt', emoji: '🎮', title: 'NEON BLASTER',            metric: 'スコア' },
     horror: { asc: true,  unit: '秒', emoji: '🕯️', title: '祓 — 八つのお札',          metric: 'クリア最速' },
-    escape: { asc: true,  unit: '秒', emoji: '🔐', title: '密室からの脱出',           metric: 'クリア最速' }
+    escape: { asc: true,  unit: '秒', emoji: '🔐', title: '密室からの脱出',           metric: 'クリア最速' },
+    rush:   { asc: true,  unit: '秒', emoji: '🏁', title: 'RUSH タイムアタック',       metric: 'クリア最速', fmt: function(v){ return (v/100).toFixed(2); } }
   };
+  // 表示整形（rushは1/100秒で保存→秒表示）
+  function format(game, v){ var c = CFG[game]; if(!c) return '' + v; return (c.fmt ? c.fmt(v) : v) + c.unit; }
 
   // ---------- local (localStorage) ----------
   function read(game) { try { return JSON.parse(localStorage.getItem('rank_' + game) || '[]'); } catch (e) { return []; } }
@@ -91,14 +94,14 @@ window.Rank = (function () {
     var c = CFG[game];
     var net = isOnline() ? '🌐' : '📱';
     var place = (rank <= 10) ? ('<span style="color:#7df9ff;font-weight:700">端末内 ' + rank + '位!</span>') : '端末内 圏外';
-    toastEl.innerHTML = net + ' ランキング登録　<b style="color:#d9b34a">' + entry.s + c.unit + '</b>　' + place;
+    toastEl.innerHTML = net + ' ランキング登録　<b style="color:#d9b34a">' + format(game, entry.s) + '</b>　' + place;
     setTimeout(function () { toastEl.style.opacity = '1'; toastEl.style.transform = 'translateX(-50%) translateY(0)'; }, 30);
     clearTimeout(toastT);
     toastT = setTimeout(function () { toastEl.style.opacity = '0'; toastEl.style.transform = 'translateX(-50%) translateY(40px)'; }, 2800);
   }
 
   return {
-    CFG: CFG, top: top, topAsync: topAsync, submitScore: submitScore,
+    CFG: CFG, top: top, topAsync: topAsync, submitScore: submitScore, format: format,
     getName: getName, setName: setName, read: read, clear: clear, isOnline: isOnline
   };
 })();
