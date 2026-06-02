@@ -93,9 +93,11 @@
   <div class="big">1on1<br>SOCCER</div>
   <div class="jp">対戦サッカー</div>
   <div class="sub">3分一本勝負。ドリブルで運び、<b>シュート</b>で叩き込め。<br>多くゴールした方が勝ち。</div>
+  <div id="rateLine" style="margin-top:18px;font-weight:800;font-size:clamp(15px,4.6vw,20px)"></div>
   <div class="menu">
+    <button class="btn gold" id="rankedBtn">🏆 ランクマッチ（レート戦）</button>
     <button class="btn alt" id="cpuBtn">🤖 CPUと対戦</button>
-    <button class="btn gold" id="onlineBtn">🌐 オンライン対戦</button>
+    <button class="btn small" id="onlineBtn" style="background:linear-gradient(180deg,#7a8a72,#4c5a46);box-shadow:0 5px 0 #2e3a2a;color:#eafff2">👥 フレンド対戦（合言葉）</button>
   </div>
   <a class="lnk" href="./index.html">← ハブに戻る</a>
   <div class="ctrl" id="ctrlText"></div>
@@ -119,6 +121,7 @@
   <div id="msgBody"></div>
 </div>
 
+<script src="./rank.js"></script>
 <script>
 (function(){
   "use strict";
@@ -319,6 +322,53 @@
   }
   var target=null; // latest snapshot for guest
 
+  // ---- rating (Elo) ----
+  var ranked=false, oppRating=1000, queue=null;
+  function getRating(){ return +(localStorage.getItem('soccer_rating')||1000); }
+  function setRating(r){ localStorage.setItem('soccer_rating', String(Math.round(r))); }
+  var TIERS=[[1600,'マスター','#ff6bd0'],[1400,'ダイヤ','#7fd6ff'],[1200,'プラチナ','#9be7d0'],[1000,'ゴールド','#f3d24a'],[800,'シルバー','#cfd6e0'],[0,'ブロンズ','#d08a4a']];
+  function tierOf(r){ for(var i=0;i<TIERS.length;i++){ if(r>=TIERS[i][0]) return {name:TIERS[i][1],color:TIERS[i][2]}; } return {name:'ブロンズ',color:'#d08a4a'}; }
+  function elo(my,opp,score){ var e=1/(1+Math.pow(10,(opp-my)/400)); return Math.round(32*(score-e)); }
+  function updateRateLine(){ var el=$('rateLine'); if(!el)return; var r=getRating(),t=tierOf(r);
+    el.innerHTML='レート <span style="color:'+t.color+'">'+r+'</span>　/　<span style="color:'+t.color+'">'+t.name+'</span>'; }
+
+  // ---- matchmaking (ranked auto-match) ----
+  var QUEUE_ROOM='RANKED-QUEUE-V1';
+  async function findMatch(){
+    ranked=true; showMatching('対戦相手を探しています…');
+    var lib; try{ lib=await import('https://esm.sh/trystero@0.21.5/nostr'); }
+    catch(e){ matchingMsg('ライブラリ読込に失敗。CPU対戦をお試しください。'); return; }
+    try{
+      var room=lib.joinRoom({appId:'kusoarcade-1on1-soccer'}, QUEUE_ROOM);
+      var mm=room.makeAction('mm'); var selfId=lib.selfId;
+      queue={room:room, send:mm[0], selfId:selfId, peers:{}, paired:false, pending:null, token:null, timer:null};
+      mm[1](function(d,pid){ onMM(d,pid); });
+      room.onPeerJoin(function(pid){ if(queue){ queue.peers[pid]=1; tryPair(); } });
+      room.onPeerLeave(function(pid){ if(queue){ delete queue.peers[pid]; if(queue.pending===pid)queue.pending=null; } });
+    }catch(e){ matchingMsg('接続エラー: '+e.message); }
+  }
+  function tryPair(){ if(!queue||queue.paired)return; var others=Object.keys(queue.peers); if(!others.length)return;
+    var all=others.concat([queue.selfId]).sort(); if(all[0]!==queue.selfId)return; // not leader → wait for invite
+    if(queue.pending)return; var partner=others.sort()[0];
+    queue.pending=partner; queue.token='M'+queue.selfId.slice(0,6)+partner.slice(0,6);
+    queue.send({t:'invite',token:queue.token}, partner);
+    clearTimeout(queue.timer); queue.timer=setTimeout(function(){ if(queue){queue.pending=null; tryPair();} },3500); }
+  function onMM(d,pid){ if(!queue||queue.paired||!d)return;
+    if(d.t==='invite'){ queue.paired=true; queue.send({t:'accept',token:d.token},pid); startPrivate(d.token); }
+    else if(d.t==='accept'){ if(d.token!==queue.token)return; queue.paired=true; startPrivate(d.token); } }
+  function startPrivate(token){ if(!queue)return; clearTimeout(queue.timer);
+    var q=queue; queue=null; setTimeout(function(){ try{q.room.leave();}catch(e){} },900);
+    showMatching('対戦相手が見つかりました！接続中…'); startNetMatch(token, true); }
+  function showMatching(text){ var box=$('msgScreen'); box.classList.remove('hidden');
+    $('msgBody').innerHTML='<div class="big" style="font-size:clamp(24px,8vw,40px)">🏆 ランクマッチ</div>'
+      +'<div class="sub" id="mmMsg">'+text+'</div>'
+      +'<div class="sub" style="color:#f3e3b6">あなたのレート '+getRating()+'（'+tierOf(getRating()).name+'）</div>'
+      +'<div class="menu"><button class="btn small" id="cancelMM" style="background:linear-gradient(180deg,#8a7f6a,#5c5444);box-shadow:0 5px 0 #3a342a;color:#fff">キャンセル</button></div>';
+    $('cancelMM').onclick=function(){ cancelMatch(); }; }
+  function matchingMsg(t){ var m=$('mmMsg'); if(m)m.textContent=t; }
+  function cancelMatch(){ try{ if(queue&&queue.room)queue.room.leave(); }catch(e){} queue=null; ranked=false; teardownNet(); showMenu(); }
+  function netStatus(t){ var l=$('lobbyStatus'); if(l&&!$('lobbyScreen').classList.contains('hidden'))l.textContent=t; var m=$('mmMsg'); if(m)m.textContent=t; }
+
   // ---- game flow ----
   var STATE_MENU=0, STATE_PLAY=1; var gstate=STATE_MENU;
   function startMatch(m){ mode=m; world=mkWorld(); lastLocalKick=localIn.kickSeq; lastRemoteKick=remoteIn.kickSeq;
@@ -334,10 +384,21 @@
   function onMatchEnd(){ sfx.whistle(); gstate=STATE_MENU;
     var meSide = (mode==='guest')?'R':'L'; var meScore=(meSide==='L')?world.scL:world.scR, opScore=(meSide==='L')?world.scR:world.scL;
     var res, cls; if(meScore>opScore){res='WIN';cls='win';} else if(meScore<opScore){res='LOSE';cls='lose';} else {res='DRAW';cls='draw';}
+    var rateHTML='';
+    if(ranked && net){ // レート戦のみレート変動
+      var sc = meScore>opScore?1 : (meScore<opScore?0:0.5);
+      var oldR=getRating(); var dlt=elo(oldR, oppRating, sc); var nr=oldR+dlt; setRating(nr);
+      if(window.Rank) Rank.submitScore('soccer', nr);
+      var t=tierOf(nr); var sign=dlt>=0?'+':'';
+      rateHTML='<div class="stat" style="margin-top:10px">レート <b style="color:'+t.color+'">'+nr+'</b> '
+        +'<span style="color:'+(dlt>=0?'#9be7b8':'#ff8d6b')+'">('+sign+dlt+')</span></div>'
+        +'<div class="sub" style="margin-top:2px;color:'+t.color+'">'+t.name+'</div>';
+    }
     if(mode==='cpu'){ var w=+(localStorage.getItem('soccer_wins')||0); if(meScore>opScore){w++;localStorage.setItem('soccer_wins',w);} }
     var box=$('msgScreen'), body=$('msgBody');
     body.innerHTML='<div class="result '+cls+'">'+res+'</div>'
       +'<div class="stat" style="font-size:clamp(20px,7vw,30px);margin-top:6px;color:#eafff2">'+world.scL+' - '+world.scR+'</div>'
+      +rateHTML
       +'<div class="menu"><button class="btn gold" id="rematchBtn">🔁 もう一度</button>'
       +'<button class="btn small" id="toMenuBtn" style="background:linear-gradient(180deg,#8a7f6a,#5c5444);box-shadow:0 5px 0 #3a342a;color:#fff">モード選択へ</button></div>'
       +'<a class="lnk" href="./index.html">← ハブに戻る</a>';
@@ -347,41 +408,44 @@
       else if(net){ if(net.isHost){ net.sendMeta({t:'start'}); startMatch(mode); } else { net.sendMeta({t:'rematchReq'}); $('lobbyStatus').textContent='相手の再戦を待っています…'; } } };
     $('toMenuBtn').onclick=function(){ teardownNet(); showMenu(); };
   }
-  function showMenu(){ gstate=STATE_MENU; hideAllOverlays(); $('menuScreen').classList.remove('hidden'); }
+  function showMenu(){ gstate=STATE_MENU; ranked=false; hideAllOverlays(); $('menuScreen').classList.remove('hidden'); updateRateLine(); }
 
   // ---- buttons ----
-  $('cpuBtn').onclick=function(){ ensureAudio(); startMatch('cpu'); };
-  $('onlineBtn').onclick=function(){ ensureAudio(); $('menuScreen').classList.add('hidden'); $('lobbyScreen').classList.remove('hidden'); $('lobbyStatus').textContent=''; };
+  $('rankedBtn').onclick=function(){ ensureAudio(); ranked=true; findMatch(); };
+  $('cpuBtn').onclick=function(){ ensureAudio(); ranked=false; startMatch('cpu'); };
+  $('onlineBtn').onclick=function(){ ensureAudio(); ranked=false; $('menuScreen').classList.add('hidden'); $('lobbyScreen').classList.remove('hidden'); $('lobbyStatus').textContent=''; };
   $('lobbyBack').onclick=function(){ teardownNet(); showMenu(); };
   $('randCodeBtn').onclick=function(){ var c='';var ch='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; for(var i=0;i<4;i++)c+=ch[Math.floor(Math.random()*ch.length)]; $('roomInput').value=c; };
-  $('connectBtn').onclick=function(){ ensureAudio(); var code=($('roomInput').value||'').trim().toUpperCase(); if(code.length<2){ $('lobbyStatus').textContent='2文字以上の合言葉を入力してください'; return; } connectOnline(code); };
+  $('connectBtn').onclick=function(){ ensureAudio(); var code=($('roomInput').value||'').trim().toUpperCase(); if(code.length<2){ $('lobbyStatus').textContent='2文字以上の合言葉を入力してください'; return; } startNetMatch(code, false); };
   $('quitBtn').onclick=function(){ teardownNet(); showMenu(); };
 
   function teardownNet(){ try{ if(net&&net.room)net.room.leave(); }catch(e){} net=null; target=null; }
 
-  async function connectOnline(code){
-    $('lobbyStatus').textContent='接続準備中… (ライブラリ読込)';
+  async function startNetMatch(code, rk){
+    ranked=!!rk; oppRating=1000; netStatus('接続準備中… (ライブラリ読込)');
     var lib;
     try{ lib=await import('https://esm.sh/trystero@0.21.5/nostr'); }
-    catch(e){ $('lobbyStatus').textContent='オンライン機能の読込に失敗。CPU対戦をお試しください。'; return; }
+    catch(e){ netStatus('オンライン機能の読込に失敗。CPU対戦をお試しください。'); return; }
     try{
       var room=lib.joinRoom({appId:'kusoarcade-1on1-soccer'}, code);
       var selfId=lib.selfId;
       var sendInput=room.makeAction('in'); var sendState=room.makeAction('st'); var sendMeta=room.makeAction('mt');
       net={ room:room, sendInput:sendInput[0], sendState:sendState[0], sendMeta:sendMeta[0], isHost:false, peerId:null, selfId:selfId };
-      $('lobbyStatus').textContent='合言葉「'+code+'」で待機中… 相手を待っています';
+      netStatus(ranked?'相手を待っています…':('合言葉「'+code+'」で待機中… 相手を待っています'));
       sendInput[1](function(d){ if(d&&typeof d==='object'){ remoteIn.mx=d.mx||0; remoteIn.my=d.my||0; if(typeof d.k==='number')remoteIn.kickSeq=d.k; } });
       sendState[1](function(d){ if(d) applySnapshot(d); });
       sendMeta[1](function(d){ onMeta(d); });
       room.onPeerJoin(function(pid){ net.peerId=pid; net.isHost = (selfId < pid); // deterministic host
-        $('lobbyStatus').textContent='接続しました！'+(net.isHost?'（あなたがホスト）':'（あなたがゲスト）');
-        if(net.isHost){ mode='host'; setTimeout(function(){ net.sendMeta({t:'start'}); startMatch('host'); },400); }
+        netStatus('接続しました！'+(net.isHost?'（ホスト）':'（ゲスト）'));
+        if(ranked) net.sendMeta({t:'rating', r:getRating()});
+        if(net.isHost){ mode='host'; setTimeout(function(){ net.sendMeta({t:'start'}); startMatch('host'); },500); }
         else { mode='guest'; } });
       room.onPeerLeave(function(){ if(gstate===STATE_PLAY||net){ showDisconnect(); } });
-    }catch(e){ $('lobbyStatus').textContent='接続エラー: '+e.message; }
+    }catch(e){ netStatus('接続エラー: '+e.message); }
   }
   function onMeta(d){ if(!d)return;
-    if(d.t==='start'){ if(!net)return; if(!net.isHost){ mode='guest'; startMatch('guest'); } }
+    if(d.t==='rating'){ oppRating=+d.r||1000; }
+    else if(d.t==='start'){ if(!net)return; if(!net.isHost){ mode='guest'; startMatch('guest'); } }
     else if(d.t==='rematchReq'){ if(net&&net.isHost){ net.sendMeta({t:'start'}); startMatch('host'); } } }
   function showDisconnect(){ teardownNet(); var box=$('msgScreen'); box.classList.remove('hidden');
     $('msgBody').innerHTML='<div class="big" style="font-size:clamp(24px,8vw,40px)">相手が切断しました</div><div class="menu"><button class="btn" id="dcMenu">モード選択へ</button></div>';
@@ -421,6 +485,7 @@
     world.time=s.tm; world.phase=s.ph;
     if(s.ph==='end' && gstate===STATE_PLAY){ gstate=STATE_MENU; onMatchEnd(); }
   }
+  updateRateLine();
   requestAnimationFrame(frame);
 })();
 </script>

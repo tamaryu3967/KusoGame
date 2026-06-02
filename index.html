@@ -172,7 +172,7 @@
         <h3>1on1 SOCCER</h3>
         <div class="genre">ONLINE / 対戦サッカー</div>
         <div class="desc">3分一本勝負の対戦サッカー。合言葉でオンライン対戦、またはCPU戦。多くゴールした方が勝ち。</div>
-        <div class="foot"><span class="best">🌐 P2P対戦 / 🤖 CPU</span><span class="play">▶ PLAY</span></div>
+        <div class="foot"><span class="best" id="best-soccer">レート 1000</span><span class="play">▶ PLAY</span></div>
       </div>
     </a>
   </div>
@@ -186,6 +186,7 @@
       <button class="tab" data-game="escape">🔐 脱出</button>
       <button class="tab" data-game="rush">🏁 RUSH</button>
       <button class="tab" data-game="p2048">🔢 2048</button>
+      <button class="tab" data-game="soccer">⚽ レート</button>
     </div>
     <div class="board" id="board"></div>
     <div class="metric-note" id="metricNote"></div>
@@ -222,6 +223,7 @@
     var el = document.getElementById('best-'+g);
     el.textContent = t.length ? ('BEST '+R.format(g, t[0].s)) : 'BEST —';
   });
+  (function(){ var sr=+(localStorage.getItem('soccer_rating')||1000); var el=document.getElementById('best-soccer'); if(el)el.textContent='レート '+sr; })();
 
   function fmtDate(ts){ var d=new Date(ts); return (d.getMonth()+1)+'/'+d.getDate(); }
 
