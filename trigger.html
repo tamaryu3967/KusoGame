@@ -104,16 +104,7 @@
   </div>
   <div id="crosshair"></div><div id="lockmark"></div>
   <div id="vig"></div><div id="shieldFx"></div><div id="cloakFx"></div>
-  <div id="triggers">
-    <div class="trg act" data-w="0"><span class="k">1</span>弧月</div>
-    <div class="trg" data-w="1"><span class="k">2</span>旋空</div>
-    <div class="trg" data-w="2"><span class="k">3</span>アステロイド</div>
-    <div class="trg" data-w="3"><span class="k">4</span>ハウンド</div>
-    <div class="trg" data-w="4"><span class="k">5</span>メテオラ</div>
-    <div class="trg" data-w="5"><span class="k">6</span>アイビス</div>
-    <div class="trg" data-w="6"><span class="k">7</span>エスクード</div>
-    <div class="trg" data-w="7"><span class="k">8</span>バッグワーム</div>
-  </div>
+  <div id="triggers"></div>
   <div id="chargeWrap" style="position:absolute;left:50%;top:58%;transform:translateX(-50%);width:120px;height:5px;border:1px solid rgba(120,200,255,.5);border-radius:3px;overflow:hidden;display:none;"><div id="chargeBar" style="height:100%;width:0%;background:#ffd24a;box-shadow:0 0 8px #ffb700;"></div></div>
   <div id="stick"><div id="knob"></div></div>
   <button class="mbtn" id="bFire">攻撃</button>
@@ -132,8 +123,17 @@
     被弾でHP0になると<b>ベイルアウト</b>。</div>
   <div class="ctrl" id="ctrlText"></div>
   <button id="startBtn" class="btn">▶ TRIGGER ON</button>
+  <button id="loadoutBtn" class="btn" style="margin-top:12px;font-size:clamp(14px,4vw,17px);padding:11px 26px;background:linear-gradient(180deg,#cdbf9a,#8a7c58);box-shadow:0 5px 0 #5c5238,0 0 16px rgba(180,160,110,.4);color:#1c1409">🔧 装備（トリガー編成）</button>
   <div class="hint" id="startHint"></div>
   <div id="loadingMsg">トリオン空間を生成中…</div>
+</div>
+
+<div id="loadoutScreen" class="overlay hidden">
+  <div class="title" style="font-size:clamp(24px,7vw,40px)">トリガー編成</div>
+  <div class="desc">使うトリガーを <b>最大8つ</b> 選択（タップで装備/解除）。<br>戦闘中は <b>1〜8キー</b> か画面下のバーで切替。</div>
+  <div id="loadoutChips" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:560px;margin-top:16px;"></div>
+  <div id="loadoutCount" style="margin-top:12px;color:#9fc4dd;font-size:13px;"></div>
+  <button id="loadoutDone" class="btn">決定</button>
 </div>
 
 <div id="pauseScreen" class="overlay hidden">
@@ -255,21 +255,23 @@ $('muteBtn').addEventListener('click',()=>{ muted=!muted; $('muteBtn').textConte
 
 // ---- state ----
 const ST={START:0,PLAY:1,PAUSE:2,OVER:3}; let state=ST.START;
-// 0弧月 1旋空 2アステロイド 3ハウンド 4メテオラ 5アイビス(狙撃) 6エスクード(設置盾) 7バッグワーム(隠密)
-const TR_NAME=['弧月','旋空','アステロイド','ハウンド','メテオラ','アイビス','エスクード','バッグワーム'];
-const TR_COST=[8,16,3,26,30,42,28,20];
+// トリガー登録（id固定）。0弧月 1旋空 2アステロイド 3ハウンド 4メテオラ 5アイビス 6エスクード 7バッグワーム 8バイパー 9サラマンダー 10スコーピオン
+const TR_NAME=['弧月','旋空','アステロイド','ハウンド','メテオラ','アイビス','エスクード','バッグワーム','バイパー','サラマンダー','スコーピオン'];
+const TR_COST=[8,16,3,26,30,42,28,20,10,38,6];
+const DEF_LOADOUT=[0,10,2,3,4,5,6,7]; // 8スロット既定
+function loadLoadout(){ try{ var s=JSON.parse(localStorage.getItem('trigger_loadout')); if(Array.isArray(s)&&s.length>=1&&s.length<=8){ s=s.filter(function(x){return x>=0&&x<TR_NAME.length;}); if(s.length)return s; } }catch(e){} return DEF_LOADOUT.slice(); }
 const player={pos:new THREE.Vector3(0,PLY_H,0),vel:new THREE.Vector3(),yaw:0,pitch:0,hp:100,maxHp:100,trion:100,maxTrion:100,
-  weapon:0,fireT:0,dash:0,dashReady:true,invuln:0,shield:false,vy:0,onGround:true,charge:0,cloak:false,cloakT:0};
+  weapon:0,fireT:0,dash:0,dashReady:true,invuln:0,shield:false,vy:0,onGround:true,charge:0,cloak:false,cloakT:0,loadout:[]};
+player.loadout=loadLoadout();
 let prevFireDown=false;
+function curCost(){ return TR_COST[player.weapon]; }
 let kills=0,wave=1,waveRemain=0,spawnTimer=0,shake=0,muzzleT=0,slashT=0;
 let best=+(localStorage.getItem('trigger_best')||0); $('bestEl').textContent=best;
 const keys={}; const move={x:0,y:0}; let fireDown=false, shieldDown=false;
 
 // ---- input ----
 addEventListener('keydown',e=>{ keys[e.code]=true;
-  if(e.code==='Digit1')setWeapon(0); if(e.code==='Digit2')setWeapon(1); if(e.code==='Digit3')setWeapon(2);
-  if(e.code==='Digit4')setWeapon(3); if(e.code==='Digit5')setWeapon(4); if(e.code==='Digit6')setWeapon(5);
-  if(e.code==='Digit7')setWeapon(6); if(e.code==='Digit8')setWeapon(7);
+  if(e.code&&e.code.indexOf('Digit')===0){ var dn=+e.code.slice(5); if(dn>=1&&dn<=player.loadout.length)setWeapon(player.loadout[dn-1]); }
   if(e.code==='ShiftLeft'||e.code==='ShiftRight')doDash();
   if(e.code==='Space'){ e.preventDefault(); doJump(); }
   if(e.code==='Escape'&&state===ST.PLAY)pause(); });
@@ -302,26 +304,44 @@ $('bShield').addEventListener('touchstart',e=>{e.preventDefault();shieldDown=tru
 $('bShield').addEventListener('touchend',e=>{e.preventDefault();shieldDown=false;});
 $('bDash').addEventListener('touchstart',e=>{e.preventDefault();doDash();},{passive:false});
 $('bJump').addEventListener('touchstart',e=>{e.preventDefault();doJump();},{passive:false});
-document.querySelectorAll('.trg').forEach(el=>{ el.addEventListener('click',e=>{e.stopPropagation();setWeapon(+el.dataset.w);});
-  el.addEventListener('touchstart',e=>{e.preventDefault();e.stopPropagation();setWeapon(+el.dataset.w);},{passive:false}); });
 
 $('startBtn').addEventListener('click',e=>{e.stopPropagation();ensureAudio();startGame();});
 $('retryBtn').addEventListener('click',e=>{e.stopPropagation();ensureAudio();startGame();});
 $('resumeBtn').addEventListener('click',e=>{e.stopPropagation();resume();});
 $('overScreen').addEventListener('click',()=>{ if(state===ST.OVER){ensureAudio();startGame();} });
 
-function setWeapon(w){ if(w===player.weapon)return; player.weapon=w; sfx.swap();
-  document.querySelectorAll('.trg').forEach(el=>el.classList.toggle('act',+el.dataset.w===w)); }
+// ---- loadout ----
+let tmpLoadout=[];
+function openLoadout(){ tmpLoadout=player.loadout.slice(); $('startScreen').classList.add('hidden'); $('loadoutScreen').classList.remove('hidden'); renderChips(); }
+function renderChips(){ const c=$('loadoutChips'); c.innerHTML='';
+  TR_NAME.forEach((nm,id)=>{ const on=tmpLoadout.indexOf(id)>=0; const d=document.createElement('div'); d.className='trg'+(on?' act':'');
+    d.style.cursor='pointer'; d.style.minWidth='84px'; d.style.padding='9px 12px'; d.textContent=nm; d.dataset.id=id; c.appendChild(d); });
+  $('loadoutCount').textContent=tmpLoadout.length+' / 8 装備中'; }
+function toggleChip(id){ const i=tmpLoadout.indexOf(id); if(i>=0){ if(tmpLoadout.length>1)tmpLoadout.splice(i,1); } else { if(tmpLoadout.length<8)tmpLoadout.push(id); } sfx.swap(); renderChips(); }
+$('loadoutChips').addEventListener('click',e=>{ const el=e.target.closest('.trg'); if(el){ ensureAudio(); toggleChip(+el.dataset.id); } });
+$('loadoutChips').addEventListener('touchstart',e=>{ const el=e.target.closest('.trg'); if(el){ e.preventDefault(); ensureAudio(); toggleChip(+el.dataset.id); } },{passive:false});
+function closeLoadout(){ player.loadout=tmpLoadout.slice(); try{localStorage.setItem('trigger_loadout',JSON.stringify(player.loadout));}catch(e){} buildBar();
+  $('loadoutScreen').classList.add('hidden'); $('startScreen').classList.remove('hidden'); }
+$('loadoutBtn').addEventListener('click',e=>{e.stopPropagation();ensureAudio();openLoadout();});
+$('loadoutDone').addEventListener('click',e=>{e.stopPropagation();ensureAudio();closeLoadout();});
+
+function setWeapon(w){ if(player.loadout.indexOf(w)<0)return; if(w!==player.weapon)sfx.swap(); player.weapon=w;
+  document.querySelectorAll('#triggers .trg').forEach(el=>el.classList.toggle('act',+el.dataset.w===w)); }
+function buildBar(){ const c=$('triggers'); c.innerHTML='';
+  player.loadout.forEach((id,i)=>{ const d=document.createElement('div'); d.className='trg'+(id===player.weapon?' act':''); d.dataset.w=id;
+    d.innerHTML='<span class="k">'+(i+1)+'</span>'+TR_NAME[id]; c.appendChild(d); }); }
+$('triggers').addEventListener('click',e=>{ const el=e.target.closest('.trg'); if(el){ e.stopPropagation(); ensureAudio(); setWeapon(+el.dataset.w); } });
+$('triggers').addEventListener('touchstart',e=>{ const el=e.target.closest('.trg'); if(el){ e.preventDefault(); e.stopPropagation(); ensureAudio(); setWeapon(+el.dataset.w); } },{passive:false});
 
 // ---- flow ----
 function startGame(){ player.pos.set(0,PLY_H,0); player.vel.set(0,0,0); player.yaw=0; player.pitch=0;
-  player.hp=player.maxHp; player.trion=player.maxTrion; player.weapon=0; player.dash=1; player.dashReady=true; player.invuln=0; player.shield=false;
+  player.hp=player.maxHp; player.trion=player.maxTrion; player.weapon=player.loadout[0]; player.dash=1; player.dashReady=true; player.invuln=0; player.shield=false;
   player.vy=0; player.onGround=true; player.charge=0; player.fireT=0; player.cloak=false; player.cloakT=0; prevFireDown=false;
   kills=0; wave=1; shake=0; move.x=0; move.y=0; fireDown=false; shieldDown=false;
   for(const e of enemyPool)deact(e); for(const b of ebulletPool){b.life=0;b.mesh.visible=false;} for(const h of houndPool){h.life=0;h.mesh.visible=false;} for(const p of particlePool){p.life=0;p.mesh.visible=false;} for(const p of pprojPool){p.life=0;p.mesh.visible=false;} for(const w of escudoPool){w.life=0;w.mesh.visible=false;} for(const bp of beamPool){bp.owner=null;bp.mesh.visible=false;}
   $('cloakFx').style.opacity='0';
   camera.fov=80; camera.updateProjectionMatrix(); $('chargeWrap').style.display='none';
-  setWeapon(0); document.querySelectorAll('.trg').forEach(el=>el.classList.toggle('act',+el.dataset.w===0));
+  buildBar(); player.weapon=-1; setWeapon(player.loadout[0]);
   startWave(1);
   state=ST.PLAY; $('startScreen').classList.add('hidden'); $('overScreen').classList.add('hidden'); $('pauseScreen').classList.add('hidden');
   updateHUD(); if(!isTouch)lockPointer(); clock.getDelta();
@@ -366,6 +386,9 @@ function primaryPress(){ // press: 弧月/旋空/ハウンド/メテオラ/エ�
   else if(player.weapon===4) meteoraFire();
   else if(player.weapon===6) escudoDeploy();
   else if(player.weapon===7) bagwormToggle();
+  else if(player.weapon===8) viperFire();
+  else if(player.weapon===9) salamanderFire();
+  else if(player.weapon===10) scorpionAttack();
 }
 function spend(c){ if(player.trion>=c){ player.trion-=c; return true; } return false; }
 function breakCloak(){ if(player.cloak){ player.cloak=false; player.cloakT=0; } }
@@ -384,17 +407,32 @@ function trionCubes(n,col){ const origin=camera.getWorldPosition(new THREE.Vecto
 function senkuFire(){ if(player.fireT>0)return; if(!spend(TR_COST[1]))return; breakCloak(); player.fireT=0.5; sfx.slash();
   const origin=camera.getWorldPosition(new THREE.Vector3()); const f=forwardVec();
   let p=null; for(const q of pprojPool)if(q.life<=0){p=q;break;} if(!p)return;
-  p.type='senku'; p.dmg=55; p.hit=new Set(); p.mesh.geometry=senkuGeo; p.mesh.material=senkuMat;
+  p.type='senku'; p.dmg=55; p.hit=new Set(); p.mesh.geometry=senkuGeo; p.mesh.material=senkuMat; p.mesh.scale.setScalar(1);
   p.mesh.position.copy(origin).addScaledVector(f,2); p.mesh.lookAt(p.mesh.position.clone().add(f)); p.mesh.rotation.z=0;
   p.vx=f.x*52; p.vy=f.y*52; p.vz=f.z*52; p.life=0.55; p.mesh.visible=true; }
 
 function meteoraFire(){ if(player.fireT>0)return; if(!spend(TR_COST[4]))return; breakCloak(); player.fireT=0.85; sfx.hound(); trionCubes(3,0xffa200);
   const origin=camera.getWorldPosition(new THREE.Vector3()); const f=forwardVec();
   let p=null; for(const q of pprojPool)if(q.life<=0){p=q;break;} if(!p)return;
-  p.type='meteora'; p.dmg=60; p.hit=null; p.mesh.geometry=meteoraGeo; p.mesh.material=meteoraMat;
+  p.type='meteora'; p.dmg=60; p.hit=null; p.mesh.geometry=meteoraGeo; p.mesh.material=meteoraMat; p.mesh.scale.setScalar(1);
   p.mesh.position.copy(origin).addScaledVector(f,1.5); p.vx=f.x*34; p.vy=f.y*34; p.vz=f.z*34; p.life=2.2; p.mesh.visible=true; }
-function meteoraExplode(pos){ spawnParticles(pos,0xffa200,26,1.2); spawnParticles(pos,0xeafdff,10,0.9); sfx.bail(); shake=Math.max(shake,0.9); hitstop=Math.max(hitstop,0.04);
-  for(const e of enemyPool){ if(!e.alive)continue; const d=e.mesh.position.distanceTo(pos); if(d<8.5) damageEnemy(e,90*(1-d/8.5*0.45),e.mesh.position,{pierceGuard:true}); } }
+function explode(pos,dmg,radius,col){ spawnParticles(pos,col||0xffa200,26,1.2); spawnParticles(pos,0xeafdff,10,0.9); sfx.bail(); shake=Math.max(shake,0.9); hitstop=Math.max(hitstop,0.04);
+  for(const e of enemyPool){ if(!e.alive)continue; const d=e.mesh.position.distanceTo(pos); if(d<radius) damageEnemy(e,dmg*(1-d/radius*0.45),e.mesh.position,{pierceGuard:true}); } }
+function meteoraExplode(pos){ explode(pos,90,8.5,0xffa200); }
+function viperFire(){ if(player.fireT>0)return; if(!spend(TR_COST[8]))return; breakCloak(); player.fireT=0.28; sfx.shot(); trionCubes(1,0x9beaff);
+  const origin=camera.getWorldPosition(new THREE.Vector3()); const f=forwardVec();
+  let p=null; for(const q of pprojPool)if(q.life<=0){p=q;break;} if(!p)return;
+  p.type='viper'; p.dmg=22; p.target=lockTarget(); p.t0=0; p.mesh.geometry=meteoraGeo; p.mesh.material=senkuMat; p.mesh.scale.setScalar(0.8);
+  p.mesh.position.copy(origin).addScaledVector(f,1.4); p.vx=f.x*40; p.vy=f.y*40; p.vz=f.z*40; p.life=1.8; p.mesh.visible=true; }
+function salamanderFire(){ if(player.fireT>0)return; if(!spend(TR_COST[9]))return; breakCloak(); player.fireT=1.0; sfx.hound(); trionCubes(4,0xffa200);
+  const origin=camera.getWorldPosition(new THREE.Vector3()); const f=forwardVec();
+  let p=null; for(const q of pprojPool)if(q.life<=0){p=q;break;} if(!p)return;
+  p.type='salamander'; p.dmg=110; p.hit=null; p.mesh.geometry=meteoraGeo; p.mesh.material=meteoraMat; p.mesh.scale.setScalar(1.5);
+  p.mesh.position.copy(origin).addScaledVector(f,1.5); p.vx=f.x*30; p.vy=f.y*30; p.vz=f.z*30; p.life=2.4; p.mesh.visible=true; }
+function scorpionAttack(){ if(player.fireT>0)return; if(!spend(TR_COST[10]))return; breakCloak(); player.fireT=0.26; sfx.slash();
+  const f=forwardVec(); slashMesh.position.copy(player.pos); slashMesh.position.y=PLY_H-0.3; slashMesh.material.opacity=0.85; slashT=0.14; const ang=Math.atan2(f.x,f.z); slashMesh.rotation.z=-ang;
+  let hitAny=false; for(const e of enemyPool){ if(!e.alive)continue; const to=tmpB.subVectors(e.mesh.position,player.pos); const d=to.length(); if(d>6.5)continue; to.normalize(); const dot=f.x*to.x+f.z*to.z; if(dot>0.5){ damageEnemy(e,42,e.mesh.position); hitAny=true; } }
+  if(hitAny){ shake=Math.max(shake,0.4); hitstop=Math.max(hitstop,0.025); } }
 
 function sniperFire(charge){ if(!spend(TR_COST[5])){ return; } breakCloak(); player.fireT=0.4; sfx.shot(); muzzleT=0.06;
   const origin=camera.getWorldPosition(new THREE.Vector3()); const dir=forwardVec();
@@ -561,7 +599,14 @@ function update(dt){
     if(p.type==='senku'){ for(const e of enemyPool){ if(!e.alive||p.hit.has(e))continue; if(e.mesh.position.distanceTo(p.mesh.position)<3.2){ p.hit.add(e); damageEnemy(e,p.dmg,e.mesh.position); } }
       if(p.life<=0){ p.mesh.visible=false; } }
     else if(p.type==='meteora'){ let boom=false; for(const e of enemyPool){ if(!e.alive)continue; if(e.mesh.position.distanceTo(p.mesh.position)<1.6){ boom=true; break; } }
-      if(boom||p.life<=0){ meteoraExplode(p.mesh.position.clone()); p.life=0; p.mesh.visible=false; } } }
+      if(boom||p.life<=0){ meteoraExplode(p.mesh.position.clone()); p.life=0; p.mesh.visible=false; } }
+    else if(p.type==='viper'){ p.t0=(p.t0||0)+dt; if(p.target&&!p.target.alive)p.target=lockTarget();
+      if(p.target){ const tp=p.target.mesh.position; const dir=tmpA.set(tp.x-p.mesh.position.x,tp.y-p.mesh.position.y,tp.z-p.mesh.position.z); const dl=dir.length()||1; const st=Math.min(1,4*dt); p.vx+=(dir.x/dl*44-p.vx)*st; p.vy+=(dir.y/dl*44-p.vy)*st; p.vz+=(dir.z/dl*44-p.vz)*st; }
+      p.mesh.position.x+=Math.sin(p.t0*18)*0.18;
+      for(const e of enemyPool){ if(!e.alive)continue; if(e.mesh.position.distanceTo(p.mesh.position)<1.7){ damageEnemy(e,p.dmg,e.mesh.position); p.life=0; p.mesh.visible=false; break; } }
+      if(p.life<=0)p.mesh.visible=false; }
+    else if(p.type==='salamander'){ let boom=false; for(const e of enemyPool){ if(!e.alive)continue; if(e.mesh.position.distanceTo(p.mesh.position)<1.9){ boom=true; break; } }
+      if(boom||p.life<=0){ explode(p.mesh.position.clone(),110,11,0xffa200); spawnParticles(p.mesh.position,0xffa200,16,1); p.life=0; p.mesh.visible=false; } } }
 
   // particles
   for(const p of particlePool){ if(p.life<=0)continue; p.life-=dt; p.vy-=22*dt; p.mesh.position.x+=p.vx*dt; p.mesh.position.y+=p.vy*dt; p.mesh.position.z+=p.vz*dt; p.mesh.rotation.x+=dt*8; const s=Math.max(0,p.life*1.6); p.mesh.scale.setScalar(s); if(p.life<=0||p.mesh.position.y<0){p.life=0;p.mesh.visible=false;} }
@@ -594,7 +639,7 @@ function frame(){ requestAnimationFrame(frame); let dt=clock.getDelta(); if(dt>0
   if(state===ST.PLAY){ if(hitstop>0)hitstop-=dt; else { elapsedT+=dt; update(dt); } }
   composer.render(); }
 
-try{ initThree(); $('loadingMsg').style.display='none'; requestAnimationFrame(frame); }
+try{ initThree(); $('loadingMsg').style.display='none'; player.weapon=player.loadout[0]; buildBar(); requestAnimationFrame(frame); }
 catch(err){ $('loadingMsg').textContent='読み込み失敗: '+err.message; console.error(err); }
 
 </script>
