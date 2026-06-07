@@ -197,7 +197,7 @@ const escudoGeo=new THREE.BoxGeometry(4.2,3.2,0.35), escudoMat=new THREE.MeshBas
 const beamGeo=new THREE.BoxGeometry(0.07,0.07,1), beamMat=new THREE.MeshBasicMaterial({color:0xff3c3c,transparent:true,opacity:0.5});
 
 const enemyPool=[], ebulletPool=[], houndPool=[], tracerPool=[], particlePool=[], pprojPool=[], escudoPool=[], beamPool=[];
-let gun, slashMesh, shieldMesh, ringMeshes=[];
+let gun, slashMesh, shieldMesh, ringMeshes=[], cubeGroup;
 
 function initThree(){
   renderer=new THREE.WebGLRenderer({antialias:!isTouch,powerPreference:'high-performance'});
@@ -216,6 +216,10 @@ function initThree(){
   gun=new THREE.Group();
   const barrel=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.12,0.9),new THREE.MeshBasicMaterial({color:0x2f9fc4})); barrel.position.set(0.4,-0.5,-0.8); gun.add(barrel);
   camera.add(gun); scene.add(camera);
+  // トリオンキューブ（シューター系トリガー装備時に手元で浮遊）
+  cubeGroup=new THREE.Group(); const cubeG=new THREE.BoxGeometry(0.13,0.13,0.13), cubeM=new THREE.MeshBasicMaterial({color:0x9be7ff});
+  for(let i=0;i<6;i++){ const cb=new THREE.Mesh(cubeG,cubeM); const a=i/6*Math.PI*2; cb.position.set(0.5+Math.cos(a)*0.2,-0.42+Math.sin(a)*0.2,-1.0); cubeGroup.add(cb); }
+  cubeGroup.visible=false; camera.add(cubeGroup);
 
   // blade slash (a thin glowing arc plane), hidden by default
   slashMesh=new THREE.Mesh(new THREE.RingGeometry(2.2,7,24,1,-0.7,1.4),new THREE.MeshBasicMaterial({color:0x9beaff,transparent:true,opacity:0,side:THREE.DoubleSide}));
@@ -256,8 +260,12 @@ $('muteBtn').addEventListener('click',()=>{ muted=!muted; $('muteBtn').textConte
 // ---- state ----
 const ST={START:0,PLAY:1,PAUSE:2,OVER:3}; let state=ST.START;
 // トリガー登録（id固定）。0弧月 1旋空 2アステロイド 3ハウンド 4メテオラ 5アイビス 6エスクード 7バッグワーム 8バイパー 9サラマンダー 10スコーピオン
-const TR_NAME=['弧月','旋空','アステロイド','ハウンド','メテオラ','アイビス','エスクード','バッグワーム','バイパー','サラマンダー','スコーピオン'];
-const TR_COST=[8,16,3,26,30,42,28,20,10,38,6];
+const TR_NAME=['弧月','旋空','アステロイド','ハウンド','メテオラ','アイビス','エスクード','バッグワーム','バイパー','サラマンダー','スコーピオン','イーグレット','ライトニング','レイガスト'];
+const TR_COST=[8,16,3,26,30,42,28,20,10,38,6,26,16,14];
+// スナイパー3種: アイビス=高威力低速 / イーグレット=均整 / ライトニング=軽量高速
+const SNIPERS={5:{base:90,scale:150,zoom:44,rate:0.8,ct:0.45},11:{base:66,scale:90,zoom:34,rate:1.15,ct:0.32},12:{base:42,scale:48,zoom:22,rate:1.9,ct:0.16}};
+function isSniper(w){ return !!SNIPERS[w]; }
+function isShooter(w){ return w===2||w===3||w===4||w===8||w===9; }
 const DEF_LOADOUT=[0,10,2,3,4,5,6,7]; // 8スロット既定
 function loadLoadout(){ try{ var s=JSON.parse(localStorage.getItem('trigger_loadout')); if(Array.isArray(s)&&s.length>=1&&s.length<=8){ s=s.filter(function(x){return x>=0&&x<TR_NAME.length;}); if(s.length)return s; } }catch(e){} return DEF_LOADOUT.slice(); }
 const player={pos:new THREE.Vector3(0,PLY_H,0),vel:new THREE.Vector3(),yaw:0,pitch:0,hp:100,maxHp:100,trion:100,maxTrion:100,
@@ -389,6 +397,7 @@ function primaryPress(){ // press: 弧月/旋空/ハウンド/メテオラ/エ�
   else if(player.weapon===8) viperFire();
   else if(player.weapon===9) salamanderFire();
   else if(player.weapon===10) scorpionAttack();
+  else if(player.weapon===13) raygustAttack();
 }
 function spend(c){ if(player.trion>=c){ player.trion-=c; return true; } return false; }
 function breakCloak(){ if(player.cloak){ player.cloak=false; player.cloakT=0; } }
@@ -405,11 +414,11 @@ function trionCubes(n,col){ const origin=camera.getWorldPosition(new THREE.Vecto
   const base=origin.clone().addScaledVector(f,1.4); for(let i=0;i<n;i++) spawnParticles(base,col,1,0.25); }
 
 function senkuFire(){ if(player.fireT>0)return; if(!spend(TR_COST[1]))return; breakCloak(); player.fireT=0.5; sfx.slash();
-  const origin=camera.getWorldPosition(new THREE.Vector3()); const f=forwardVec();
-  let p=null; for(const q of pprojPool)if(q.life<=0){p=q;break;} if(!p)return;
-  p.type='senku'; p.dmg=55; p.hit=new Set(); p.mesh.geometry=senkuGeo; p.mesh.material=senkuMat; p.mesh.scale.setScalar(1);
-  p.mesh.position.copy(origin).addScaledVector(f,2); p.mesh.lookAt(p.mesh.position.clone().add(f)); p.mesh.rotation.z=0;
-  p.vx=f.x*52; p.vy=f.y*52; p.vz=f.z*52; p.life=0.55; p.mesh.visible=true; }
+  // 旋空＝弧月の斬撃を“伸ばす”：長射程の即時薙ぎ
+  const f=forwardVec(); slashMesh.position.copy(player.pos); slashMesh.position.y=PLY_H-0.3; slashMesh.scale.setScalar(2.0);
+  slashMesh.material.opacity=0.9; slashT=0.22; const ang=Math.atan2(f.x,f.z); slashMesh.rotation.z=-ang;
+  let hitAny=false; for(const e of enemyPool){ if(!e.alive)continue; const to=tmpB.subVectors(e.mesh.position,player.pos); const d=to.length(); if(d>14)continue; to.normalize(); const dot=f.x*to.x+f.z*to.z; if(dot>0.5){ damageEnemy(e,52,e.mesh.position); hitAny=true; } }
+  if(hitAny){ shake=Math.max(shake,0.55); hitstop=Math.max(hitstop,0.03); } }
 
 function meteoraFire(){ if(player.fireT>0)return; if(!spend(TR_COST[4]))return; breakCloak(); player.fireT=0.85; sfx.hound(); trionCubes(3,0xffa200);
   const origin=camera.getWorldPosition(new THREE.Vector3()); const f=forwardVec();
@@ -419,24 +428,25 @@ function meteoraFire(){ if(player.fireT>0)return; if(!spend(TR_COST[4]))return; 
 function explode(pos,dmg,radius,col){ spawnParticles(pos,col||0xffa200,26,1.2); spawnParticles(pos,0xeafdff,10,0.9); sfx.bail(); shake=Math.max(shake,0.9); hitstop=Math.max(hitstop,0.04);
   for(const e of enemyPool){ if(!e.alive)continue; const d=e.mesh.position.distanceTo(pos); if(d<radius) damageEnemy(e,dmg*(1-d/radius*0.45),e.mesh.position,{pierceGuard:true}); } }
 function meteoraExplode(pos){ explode(pos,90,8.5,0xffa200); }
-function viperFire(){ if(player.fireT>0)return; if(!spend(TR_COST[8]))return; breakCloak(); player.fireT=0.28; sfx.shot(); trionCubes(1,0x9beaff);
-  const origin=camera.getWorldPosition(new THREE.Vector3()); const f=forwardVec();
-  let p=null; for(const q of pprojPool)if(q.life<=0){p=q;break;} if(!p)return;
-  p.type='viper'; p.dmg=22; p.target=lockTarget(); p.t0=0; p.mesh.geometry=meteoraGeo; p.mesh.material=senkuMat; p.mesh.scale.setScalar(0.8);
-  p.mesh.position.copy(origin).addScaledVector(f,1.4); p.vx=f.x*40; p.vy=f.y*40; p.vz=f.z*40; p.life=1.8; p.mesh.visible=true; }
+function viperFire(){ if(player.fireT>0)return; if(!spend(TR_COST[8]))return; breakCloak(); player.fireT=0.3; sfx.shot(); trionCubes(1,0x9beaff);
+  const origin=camera.getWorldPosition(new THREE.Vector3()); const f=forwardVec(); const tgt=lockTarget();
+  const rx=Math.cos(player.yaw), rz=-Math.sin(player.yaw); // 進行方向に対する右
+  for(const side of [-1,1]){ let p=null; for(const q of pprojPool)if(q.life<=0){p=q;break;} if(!p)break;
+    p.type='viper'; p.dmg=18; p.target=tgt; p.t0=0; p.side=side; p.rx=rx; p.rz=rz; p.mesh.geometry=meteoraGeo; p.mesh.material=senkuMat; p.mesh.scale.setScalar(0.8);
+    p.mesh.position.copy(origin).addScaledVector(f,1.4+side*0.15); p.vx=f.x*38; p.vy=f.y*38; p.vz=f.z*38; p.life=1.9; p.mesh.visible=true; } }
 function salamanderFire(){ if(player.fireT>0)return; if(!spend(TR_COST[9]))return; breakCloak(); player.fireT=1.0; sfx.hound(); trionCubes(4,0xffa200);
   const origin=camera.getWorldPosition(new THREE.Vector3()); const f=forwardVec();
   let p=null; for(const q of pprojPool)if(q.life<=0){p=q;break;} if(!p)return;
   p.type='salamander'; p.dmg=110; p.hit=null; p.mesh.geometry=meteoraGeo; p.mesh.material=meteoraMat; p.mesh.scale.setScalar(1.5);
   p.mesh.position.copy(origin).addScaledVector(f,1.5); p.vx=f.x*30; p.vy=f.y*30; p.vz=f.z*30; p.life=2.4; p.mesh.visible=true; }
 function scorpionAttack(){ if(player.fireT>0)return; if(!spend(TR_COST[10]))return; breakCloak(); player.fireT=0.26; sfx.slash();
-  const f=forwardVec(); slashMesh.position.copy(player.pos); slashMesh.position.y=PLY_H-0.3; slashMesh.material.opacity=0.85; slashT=0.14; const ang=Math.atan2(f.x,f.z); slashMesh.rotation.z=-ang;
+  const f=forwardVec(); slashMesh.position.copy(player.pos); slashMesh.position.y=PLY_H-0.3; slashMesh.scale.setScalar(1); slashMesh.material.opacity=0.85; slashT=0.14; const ang=Math.atan2(f.x,f.z); slashMesh.rotation.z=-ang;
   let hitAny=false; for(const e of enemyPool){ if(!e.alive)continue; const to=tmpB.subVectors(e.mesh.position,player.pos); const d=to.length(); if(d>6.5)continue; to.normalize(); const dot=f.x*to.x+f.z*to.z; if(dot>0.5){ damageEnemy(e,42,e.mesh.position); hitAny=true; } }
   if(hitAny){ shake=Math.max(shake,0.4); hitstop=Math.max(hitstop,0.025); } }
 
-function sniperFire(charge){ if(!spend(TR_COST[5])){ return; } breakCloak(); player.fireT=0.4; sfx.shot(); muzzleT=0.06;
+function sniperFire(charge){ var S=SNIPERS[player.weapon]||SNIPERS[5]; if(!spend(TR_COST[player.weapon])){ return; } breakCloak(); player.fireT=S.ct; sfx.shot(); muzzleT=0.06;
   const origin=camera.getWorldPosition(new THREE.Vector3()); const dir=forwardVec();
-  const dmg=90+Math.round(charge*150); // piercing
+  const dmg=S.base+Math.round(charge*S.scale); // piercing
   spawnTracer(origin.clone().addScaledVector(dir,1.2), origin.clone().addScaledVector(dir,150));
   const hitSet=new Set();
   const meshes=[]; for(const e of enemyPool)if(e.alive)meshes.push(e.mesh);
@@ -446,9 +456,13 @@ function sniperFire(charge){ if(!spend(TR_COST[5])){ return; } breakCloak(); pla
   for(const e of enemyPool){ if(!e.alive||hitSet.has(e))continue; const to=tmpB.subVectors(e.mesh.position,origin); const dist=to.length(); if(dist>160)continue; to.normalize(); if(to.dot(dir)>Math.cos(0.13)){ hitSet.add(e); damageEnemy(e,dmg,e.mesh.position,{pierceGuard:true}); } }
   shake=Math.max(shake,0.7); }
 
+function raygustAttack(){ if(player.fireT>0)return; if(!spend(TR_COST[13]))return; breakCloak(); player.fireT=0.55; sfx.slash();
+  const f=forwardVec(); slashMesh.position.copy(player.pos); slashMesh.position.y=PLY_H-0.3; slashMesh.scale.setScalar(1.35); slashMesh.material.opacity=0.9; slashT=0.2; const ang=Math.atan2(f.x,f.z); slashMesh.rotation.z=-ang;
+  let hitAny=false; for(const e of enemyPool){ if(!e.alive)continue; const to=tmpB.subVectors(e.mesh.position,player.pos); const d=to.length(); if(d>7)continue; const nx=to.x/d, nz=to.z/d; const dot=f.x*nx+f.z*nz; if(dot>0.35){ damageEnemy(e,50,e.mesh.position); e.mesh.position.x+=nx*4.5; e.mesh.position.z+=nz*4.5; const er=Math.hypot(e.mesh.position.x,e.mesh.position.z); if(er>ARENA-2){const k=(ARENA-2)/er;e.mesh.position.x*=k;e.mesh.position.z*=k;} hitAny=true; } }
+  if(hitAny){ shake=Math.max(shake,0.6); hitstop=Math.max(hitstop,0.04); } }
 function meleeAttack(){ if(player.fireT>0)return; if(!spend(TR_COST[0]))return; breakCloak(); player.fireT=0.42; sfx.slash();
   // slash visual at player, oriented to facing
-  const f=forwardVec(); slashMesh.position.copy(player.pos); slashMesh.position.y=PLY_H-0.3;
+  const f=forwardVec(); slashMesh.position.copy(player.pos); slashMesh.position.y=PLY_H-0.3; slashMesh.scale.setScalar(1);
   slashMesh.material.opacity=0.85; slashT=0.18; const ang=Math.atan2(f.x,f.z); slashMesh.rotation.z=-ang;
   // cone hit
   let hitAny=false;
@@ -456,12 +470,15 @@ function meleeAttack(){ if(player.fireT>0)return; if(!spend(TR_COST[0]))return; 
     to.normalize(); const dot=f.x*to.x+f.z*to.z; if(dot>0.55){ damageEnemy(e,70,e.mesh.position); hitAny=true; } }
   if(hitAny){ shake=Math.max(shake,0.5); hitstop=Math.max(hitstop,0.03); }
 }
-function houndFire(){ if(player.fireT>0)return; if(!spend(TR_COST[3]))return; breakCloak(); player.fireT=0.7; sfx.hound(); trionCubes(3,0x6bff9a);
-  const tgt=lockTarget(); const origin=camera.getWorldPosition(new THREE.Vector3()); const f=forwardVec();
-  for(let i=0;i<3;i++){ let h=null; for(const q of houndPool)if(q.life<=0){h=q;break;} if(!h)break;
-    h.mesh.position.copy(origin); h.target=tgt; const spread=(i-1)*0.25;
+function lockMany(n){ const origin=camera.getWorldPosition(new THREE.Vector3()),f=forwardVec(); const arr=[];
+  for(const e of enemyPool){ if(!e.alive)continue; const to=tmpB.subVectors(e.mesh.position,origin); to.normalize(); const d=to.dot(f); if(d>Math.cos(0.7)) arr.push({e:e,d:d}); }
+  arr.sort((a,b)=>b.d-a.d); return arr.slice(0,n).map(x=>x.e); }
+function houndFire(){ if(player.fireT>0)return; if(!spend(TR_COST[3]))return; breakCloak(); player.fireT=0.7; sfx.hound(); trionCubes(4,0x6bff9a);
+  const tgts=lockMany(4); const origin=camera.getWorldPosition(new THREE.Vector3()); const f=forwardVec(); const N=4;
+  for(let i=0;i<N;i++){ let h=null; for(const q of houndPool)if(q.life<=0){h=q;break;} if(!h)break;
+    h.mesh.position.copy(origin); h.target= tgts.length? tgts[i%tgts.length] : null; const spread=(i-(N-1)/2)*0.22;
     const dir=f.clone(); dir.x+=Math.cos(player.yaw)*spread; dir.z+=-Math.sin(player.yaw)*spread; dir.normalize();
-    h.vx=dir.x*40; h.vy=dir.y*40+ (Math.random()*4); h.vz=dir.z*40; h.life=2.2; h.mesh.visible=true; } }
+    h.vx=dir.x*40; h.vy=dir.y*40+(Math.random()*4); h.vz=dir.z*40; h.life=2.3; h.mesh.visible=true; } }
 function asteroidFire(){ if(player.fireT>0)return; if(!spend(TR_COST[2]))return; breakCloak(); player.fireT=0.085; sfx.shot(); muzzleT=0.04; if(Math.random()<0.4)trionCubes(1,0xeafdff);
   const origin=camera.getWorldPosition(new THREE.Vector3()); const dir=forwardVec();
   const meshes=[]; for(const e of enemyPool)if(e.alive)meshes.push(e.mesh);
@@ -513,7 +530,8 @@ function update(dt){
   if(player.invuln>0)player.invuln-=dt;
   if(player.fireT>0)player.fireT-=dt;
   if(!player.dashReady){ player.dash+=dt/1.3; if(player.dash>=1){player.dash=1;player.dashReady=true;} }
-  if(muzzleT>0)muzzleT-=dt; if(slashT>0){ slashT-=dt; slashMesh.material.opacity=Math.max(0,slashT/0.18*0.85); } else slashMesh.material.opacity=0;
+  if(muzzleT>0)muzzleT-=dt; if(slashT>0){ slashT-=dt; slashMesh.material.opacity=Math.max(0,Math.min(0.9,slashT*4.5)); } else slashMesh.material.opacity=0;
+  if(cubeGroup){ cubeGroup.visible=isShooter(player.weapon); if(cubeGroup.visible){ cubeGroup.rotation.z+=dt*1.6; for(const c of cubeGroup.children){ c.rotation.x+=dt*3; c.rotation.y+=dt*2; } } }
 
   // shield
   player.shield = shieldDown && player.trion>3;
@@ -540,10 +558,11 @@ function update(dt){
 
   // 射撃：アステロイド=押しっぱ連射 / アイビス=チャージ→離して発射
   if(fireDown && player.weapon===2) asteroidFire();
-  if(player.weapon===5){ if(fireDown){ player.charge=Math.min(1,player.charge+dt*0.8); } else if(prevFireDown && player.charge>0.05){ sniperFire(player.charge); player.charge=0; } else { player.charge=0; } }
+  if(isSniper(player.weapon)){ const SS=SNIPERS[player.weapon]; if(fireDown){ player.charge=Math.min(1,player.charge+dt*SS.rate); } else if(prevFireDown && player.charge>0.05){ sniperFire(player.charge); player.charge=0; } else { player.charge=0; } }
   else player.charge=0;
-  const wantFov=(player.weapon===5&&fireDown)?80-player.charge*44:80; camera.fov+=(wantFov-camera.fov)*Math.min(1,dt*8); camera.updateProjectionMatrix();
-  $('chargeWrap').style.display=(player.weapon===5&&fireDown)?'block':'none'; $('chargeBar').style.width=(player.charge*100)+'%';
+  const sniping=isSniper(player.weapon)&&fireDown; const zoomW=sniping?SNIPERS[player.weapon].zoom:0;
+  const wantFov=sniping?80-player.charge*zoomW:80; camera.fov+=(wantFov-camera.fov)*Math.min(1,dt*8); camera.updateProjectionMatrix();
+  $('chargeWrap').style.display=sniping?'block':'none'; $('chargeBar').style.width=(player.charge*100)+'%';
   prevFireDown=fireDown;
 
   // 隠密(バッグワーム)：敵がプレイヤーを見失う
@@ -601,8 +620,8 @@ function update(dt){
     else if(p.type==='meteora'){ let boom=false; for(const e of enemyPool){ if(!e.alive)continue; if(e.mesh.position.distanceTo(p.mesh.position)<1.6){ boom=true; break; } }
       if(boom||p.life<=0){ meteoraExplode(p.mesh.position.clone()); p.life=0; p.mesh.visible=false; } }
     else if(p.type==='viper'){ p.t0=(p.t0||0)+dt; if(p.target&&!p.target.alive)p.target=lockTarget();
-      if(p.target){ const tp=p.target.mesh.position; const dir=tmpA.set(tp.x-p.mesh.position.x,tp.y-p.mesh.position.y,tp.z-p.mesh.position.z); const dl=dir.length()||1; const st=Math.min(1,4*dt); p.vx+=(dir.x/dl*44-p.vx)*st; p.vy+=(dir.y/dl*44-p.vy)*st; p.vz+=(dir.z/dl*44-p.vz)*st; }
-      p.mesh.position.x+=Math.sin(p.t0*18)*0.18;
+      if(p.target){ const tp=p.target.mesh.position; const dir=tmpA.set(tp.x-p.mesh.position.x,tp.y-p.mesh.position.y,tp.z-p.mesh.position.z); const dl=dir.length()||1; const st=Math.min(1,2.6*dt); p.vx+=(dir.x/dl*42-p.vx)*st; p.vy+=(dir.y/dl*42-p.vy)*st; p.vz+=(dir.z/dl*42-p.vz)*st; }
+      const w=Math.sin(p.t0*15)*0.5*(p.side||1); p.mesh.position.x+=(p.rx||0)*w; p.mesh.position.z+=(p.rz||0)*w; // S字の曲射
       for(const e of enemyPool){ if(!e.alive)continue; if(e.mesh.position.distanceTo(p.mesh.position)<1.7){ damageEnemy(e,p.dmg,e.mesh.position); p.life=0; p.mesh.visible=false; break; } }
       if(p.life<=0)p.mesh.visible=false; }
     else if(p.type==='salamander'){ let boom=false; for(const e of enemyPool){ if(!e.alive)continue; if(e.mesh.position.distanceTo(p.mesh.position)<1.9){ boom=true; break; } }
